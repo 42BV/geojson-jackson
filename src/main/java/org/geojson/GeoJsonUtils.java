@@ -317,6 +317,79 @@ public class GeoJsonUtils {
     }
 
     /**
+     * Processes a Polygon according to RFC 7946 recommendations.
+     *
+     * @param polygon The Polygon to process
+     * @return The processed GeoJSON object
+     */
+    private static GeoJsonObject processPolygon(Polygon polygon) {
+        GeoJsonConfig config = GeoJsonConfig.getInstance();
+
+        // Fix polygon orientation if needed
+        if (config.isAutoFixPolygonOrientation()) {
+            fixPolygonOrientation(polygon.getCoordinates());
+        }
+
+        // Cut at antimeridian if needed
+        if (config.isCutAntimeridian()) {
+            return cutPolygonAtAntimeridian(polygon);
+        }
+
+        return polygon;
+    }
+
+    /**
+     * Processes a LineString according to RFC 7946 recommendations.
+     *
+     * @param lineString The LineString to process
+     * @return The processed GeoJSON object
+     */
+    private static GeoJsonObject processLineString(LineString lineString) {
+        if (GeoJsonConfig.getInstance().isCutAntimeridian()) {
+            return cutLineStringAtAntimeridian(lineString);
+        }
+        return lineString;
+    }
+
+    /**
+     * Processes a Feature according to RFC 7946 recommendations.
+     *
+     * @param feature The Feature to process
+     * @return The processed Feature
+     */
+    private static Feature processFeature(Feature feature) {
+        GeoJsonObject geometry = feature.getGeometry();
+        if (geometry != null) {
+            feature.setGeometry(process(geometry));
+        }
+        return feature;
+    }
+
+    /**
+     * Processes a FeatureCollection according to RFC 7946 recommendations.
+     *
+     * @param featureCollection The FeatureCollection to process
+     * @return The processed FeatureCollection
+     */
+    private static FeatureCollection processFeatureCollection(FeatureCollection featureCollection) {
+        for (Feature feature : featureCollection) {
+            processFeature(feature);
+        }
+        return featureCollection;
+    }
+
+    /**
+     * Processes a GeometryCollection according to RFC 7946 recommendations.
+     *
+     * @param geometryCollection The GeometryCollection to process
+     * @return The processed GeometryCollection
+     */
+    private static GeometryCollection processGeometryCollection(GeometryCollection geometryCollection) {
+        geometryCollection.getGeometries().replaceAll(GeoJsonUtils::process);
+        return geometryCollection;
+    }
+
+    /**
      * Processes a GeoJSON object according to RFC 7946 recommendations.
      * This includes:
      * - Cutting geometries that cross the antimeridian
@@ -326,48 +399,25 @@ public class GeoJsonUtils {
      * @return The processed GeoJSON object
      */
     public static GeoJsonObject process(GeoJsonObject object) {
+        // Skip processing if RFC 7946 compliance is disabled
         if (!GeoJsonConfig.getInstance().isRfc7946Compliance()) {
             return object;
         }
 
+        // Process based on object type
         if (object instanceof Polygon) {
-            Polygon polygon = (Polygon) object;
-
-            // Fix polygon orientation if needed
-            if (GeoJsonConfig.getInstance().isAutoFixPolygonOrientation()) {
-                fixPolygonOrientation(polygon.getCoordinates());
-            }
-
-            // Cut at antimeridian if needed
-            if (GeoJsonConfig.getInstance().isCutAntimeridian()) {
-                return cutPolygonAtAntimeridian(polygon);
-            }
+            return processPolygon((Polygon) object);
         } else if (object instanceof LineString) {
-            LineString lineString = (LineString) object;
-
-            // Cut at antimeridian if needed
-            if (GeoJsonConfig.getInstance().isCutAntimeridian()) {
-                return cutLineStringAtAntimeridian(lineString);
-            }
+            return processLineString((LineString) object);
         } else if (object instanceof Feature) {
-            Feature feature = (Feature) object;
-            GeoJsonObject geometry = feature.getGeometry();
-            if (geometry != null) {
-                feature.setGeometry(process(geometry));
-            }
+            return processFeature((Feature) object);
         } else if (object instanceof FeatureCollection) {
-            FeatureCollection featureCollection = (FeatureCollection) object;
-            for (Feature feature : featureCollection) {
-                GeoJsonObject geometry = feature.getGeometry();
-                if (geometry != null) {
-                    feature.setGeometry(process(geometry));
-                }
-            }
+            return processFeatureCollection((FeatureCollection) object);
         } else if (object instanceof GeometryCollection) {
-            GeometryCollection geometryCollection = (GeometryCollection) object;
-            geometryCollection.getGeometries().replaceAll(GeoJsonUtils::process);
+            return processGeometryCollection((GeometryCollection) object);
         }
 
+        // Return unmodified for other types
         return object;
     }
 
