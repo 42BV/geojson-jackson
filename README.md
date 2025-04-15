@@ -105,28 +105,17 @@ You can customize the RFC 7946 compliance behavior using the `GeoJsonConfig` cla
 GeoJsonConfig config = GeoJsonConfig.rfc7946();
 
 // Customize the configuration
-config
-        .
-
-setValidatePolygonOrientation(true)
+config.setValidatePolygonOrientation(true)
 // Automatically fix polygon orientation instead of throwing exceptions
-    .
-
-setAutoFixPolygonOrientation(true)
+.setAutoFixPolygonOrientation(true)
 // Enable antimeridian cutting (already enabled by default in rfc7946 mode)
-    .
-
-setCutAntimeridian(true)
+.setCutAntimeridian(true)
 // Disable warnings when CRS is used
-    .
-
-setWarnOnCrsUse(false);
+.setWarnOnCrsUse(false);
 
 // Apply the configuration to a GeoJSON object
 Polygon polygon = new Polygon();
-polygon.
-
-setConfig(config);
+polygon.setConfig(config);
 ```
 
 You can also use the factory methods to create common configurations:
@@ -154,9 +143,7 @@ GeoJsonConfig config = GeoJsonConfig.rfc7946()
 
 // Apply the configuration to a polygon
 Polygon polygon = new Polygon();
-polygon.
-
-setConfig(config);
+polygon.setConfig(config);
 
 // Or create a configuration that auto-fixes orientation (silently fixes invalid rings)
 GeoJsonConfig autoFixConfig = GeoJsonConfig.rfc7946()
@@ -165,9 +152,7 @@ GeoJsonConfig autoFixConfig = GeoJsonConfig.rfc7946()
 
 // Apply the configuration to another polygon
 Polygon anotherPolygon = new Polygon();
-anotherPolygon.
-
-setConfig(autoFixConfig);
+anotherPolygon.setConfig(autoFixConfig);
 ```
 
 ### Antimeridian Cutting
