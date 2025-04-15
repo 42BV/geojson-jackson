@@ -1,8 +1,8 @@
 package org.geojson;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import org.geojson.util.JsonTestUtils;
 import org.geojson.util.TestResourceLoader;
 import org.junit.Test;
 
@@ -24,6 +24,6 @@ public class FeatureTest {
 		// A feature object must have a member with the name "properties".
 		// The value of the properties member is an object (any JSON object or a JSON null value).
         String expectedJson = TestResourceLoader.loadJson("json/feature/feature.json");
-        assertEquals(expectedJson, mapper.writeValueAsString(testObject));
+		JsonTestUtils.jsonEquals(expectedJson, mapper.writeValueAsString(testObject));
 	}
 }

@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.geojson.LngLatAlt;
 import org.geojson.Polygon;
+import org.geojson.util.JsonTestUtils;
 import org.geojson.util.TestResourceLoader;
 import org.junit.Test;
 
@@ -20,7 +21,7 @@ public class PolygonTest {
 	public void itShouldSerialize() throws Exception {
 		Polygon polygon = new Polygon(MockData.EXTERNAL);
 		String expectedJson = TestResourceLoader.loadJson("json/polygon/polygon.json");
-		assertEquals(expectedJson, mapper.writeValueAsString(polygon));
+		JsonTestUtils.jsonEquals(expectedJson, mapper.writeValueAsString(polygon));
 	}
 
 	@Test
@@ -28,7 +29,7 @@ public class PolygonTest {
 		Polygon polygon = new Polygon(MockData.EXTERNAL);
 		polygon.addInteriorRing(MockData.INTERNAL);
 		String expectedJson = TestResourceLoader.loadJson("json/polygon/polygon_with_hole.json");
-		assertEquals(expectedJson, mapper.writeValueAsString(polygon));
+		JsonTestUtils.jsonEquals(expectedJson, mapper.writeValueAsString(polygon));
 	}
 
 	@Test(expected = RuntimeException.class)

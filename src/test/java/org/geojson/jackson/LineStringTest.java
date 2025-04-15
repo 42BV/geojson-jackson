@@ -1,6 +1,5 @@
 package org.geojson.jackson;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.util.List;
@@ -8,6 +7,7 @@ import java.util.List;
 import org.geojson.LineString;
 import org.geojson.LngLatAlt;
 import org.geojson.MultiPoint;
+import org.geojson.util.JsonTestUtils;
 import org.geojson.util.TestResourceLoader;
 import org.junit.Test;
 
@@ -21,7 +21,7 @@ public class LineStringTest {
 	public void itShouldSerializeMultiPoint() throws Exception {
 		MultiPoint lineString = new LineString(new LngLatAlt(100, 0), new LngLatAlt(101, 1));
         String expectedJson = TestResourceLoader.loadJson("json/linestring/linestring.json");
-        assertEquals(expectedJson, mapper.writeValueAsString(lineString));
+        JsonTestUtils.jsonEquals(expectedJson, mapper.writeValueAsString(lineString));
 	}
 
 	@Test

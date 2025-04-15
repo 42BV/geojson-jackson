@@ -7,15 +7,14 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 import org.geojson.GeoJsonObject;
 import org.geojson.LngLatAlt;
 import org.geojson.Point;
+import org.geojson.util.JsonTestUtils;
 import org.geojson.util.TestResourceLoader;
 import org.junit.Test;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class PointTest {
@@ -43,7 +42,7 @@ public class PointTest {
 	public void itShouldSerializeAPoint() throws Exception {
 		Point point = new Point(100, 0);
         String expectedJson = TestResourceLoader.loadJson("json/point/point.json");
-        assertEquals(expectedJson, mapper.writeValueAsString(point));
+        JsonTestUtils.jsonEquals(expectedJson, mapper.writeValueAsString(point));
 	}
 
 	@Test
@@ -68,7 +67,7 @@ public class PointTest {
 	public void itShouldSerializeAPointWithAltitude() throws Exception {
 		Point point = new Point(100, 0, 256);
         String expectedJson = TestResourceLoader.loadJson("json/point/point_with_altitude_serialized.json");
-        assertEquals(expectedJson, mapper.writeValueAsString(point));
+        JsonTestUtils.jsonEquals(expectedJson, mapper.writeValueAsString(point));
 	}
 
 	@Test
@@ -83,13 +82,13 @@ public class PointTest {
     public void itShouldSerializeAPointWithAdditionalAttributes() throws IOException {
 		Point point = new Point(100, 0, 256, 345d, 678d);
         String expectedJson = TestResourceLoader.loadJson("json/point/point_with_additional_attributes_serialized.json");
-        assertEquals(expectedJson, mapper.writeValueAsString(point));
+        JsonTestUtils.jsonEquals(expectedJson, mapper.writeValueAsString(point));
 	}
 
 	@Test
     public void itShouldSerializeAPointWithAdditionalAttributesAndNull() throws IOException {
 		Point point = new Point(100, 0, 256, 345d, 678d);
         String expectedJson = TestResourceLoader.loadJson("json/point/point_with_additional_attributes_serialized.json");
-        assertEquals(expectedJson, mapper.writeValueAsString(point));
+        JsonTestUtils.jsonEquals(expectedJson, mapper.writeValueAsString(point));
 	}
 }
