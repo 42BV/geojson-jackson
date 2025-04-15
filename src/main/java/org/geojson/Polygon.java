@@ -16,117 +16,117 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  */
 public class Polygon extends Geometry<List<LngLatAlt>> {
 
-	public Polygon() {
-	}
+    public Polygon() {
+    }
 
-	public Polygon(List<LngLatAlt> polygon) {
-		add(polygon);
-	}
+    public Polygon(List<LngLatAlt> polygon) {
+        add(polygon);
+    }
 
-	public Polygon(LngLatAlt... polygon) {
-		add(Arrays.asList(polygon));
-	}
+    public Polygon(LngLatAlt... polygon) {
+        add(Arrays.asList(polygon));
+    }
 
-	@Override
-	public Geometry<List<LngLatAlt>> add(List<LngLatAlt> elements) {
-		super.add(elements);
+    @Override
+    public Geometry<List<LngLatAlt>> add(List<LngLatAlt> elements) {
+        if (elements == null || elements.isEmpty()) {
+            return this;
+        }
 
-		// Process according to RFC 7946 if enabled
-		processRfc7946();
+        if (getConfig().isValidatePolygonOrientation()) {
+            // Check if the ring has at least 4 points
+            if (elements.size() < 4) {
+                throw new IllegalArgumentException("Ring must have at least 4 points (3 unique points + closure)");
+            }
 
-		return this;
-	}
+            // Check if the ring is closed (first and last points are the same)
+            LngLatAlt first = elements.get(0);
+            LngLatAlt last = elements.get(elements.size() - 1);
+            if (first.getLongitude() != last.getLongitude() || first.getLatitude() != last.getLatitude()) {
+                throw new IllegalArgumentException("Ring must be closed (first and last points must be the same)");
+            }
+        }
 
-	/**
-	 * Set the exterior ring of the polygon.
-	 *
-	 * @param points The points of the exterior ring
-	 */
-	public void setExteriorRing(List<LngLatAlt> points) {
-		if (coordinates.isEmpty()) {
-			coordinates.add(0, points);
-		} else {
-			coordinates.set(0, points);
-		}
+        super.add(elements);
+        processPolygon();
+        return this;
+    }
 
-		// Process according to RFC 7946 if enabled
-		processRfc7946();
-	}
+    @JsonIgnore
+    public List<LngLatAlt> getExteriorRing() {
+        assertExteriorRing();
+        return coordinates.get(0);
+    }
 
-	@JsonIgnore
-	public List<LngLatAlt> getExteriorRing() {
-		assertExteriorRing();
-		return coordinates.get(0);
-	}
+    /**
+     * Set the exterior ring of the polygon.
+     *
+     * @param points The points of the exterior ring
+     */
+    public void setExteriorRing(List<LngLatAlt> points) {
+        if (coordinates.isEmpty()) {
+            coordinates.add(0, points);
+        } else {
+            coordinates.set(0, points);
+        }
 
-	@JsonIgnore
-	public List<List<LngLatAlt>> getInteriorRings() {
-		assertExteriorRing();
-		return coordinates.subList(1, coordinates.size());
-	}
+        // Process according to RFC 7946 if enabled
+        processPolygon();
+    }
 
-	public List<LngLatAlt> getInteriorRing(int index) {
-		assertExteriorRing();
-		return coordinates.get(1 + index);
-	}
+    @JsonIgnore
+    public List<List<LngLatAlt>> getInteriorRings() {
+        assertExteriorRing();
+        return coordinates.subList(1, coordinates.size());
+    }
 
-	public void addInteriorRing(List<LngLatAlt> points) {
-		assertExteriorRing();
-		coordinates.add(points);
+    public List<LngLatAlt> getInteriorRing(int index) {
+        assertExteriorRing();
+        return coordinates.get(1 + index);
+    }
 
-		// Process according to RFC 7946 if enabled
-		processRfc7946();
-	}
+    public void addInteriorRing(List<LngLatAlt> points) {
+        assertExteriorRing();
+        coordinates.add(points);
+        processPolygon();
+    }
 
-	public void addInteriorRing(LngLatAlt... points) {
-		assertExteriorRing();
-		coordinates.add(Arrays.asList(points));
+    public void addInteriorRing(LngLatAlt... points) {
+        assertExteriorRing();
+        coordinates.add(Arrays.asList(points));
+        processPolygon();
+    }
 
-		// Process according to RFC 7946 if enabled
-		processRfc7946();
-	}
+    /**
+     * Process the polygon according to RFC 7946 requirements if enabled.
+     * This includes validating or fixing ring orientation.
+     */
+    private void processPolygon() {
+        if (coordinates.isEmpty()) {
+            return;
+        }
 
-	/**
-	 * Process the polygon according to RFC 7946 requirements if enabled.
-	 * This includes validating or fixing ring orientation.
-	 */
-	private void processRfc7946() {
-		if (!GeoJsonConfig.getInstance().isRfc7946Compliance() || coordinates.isEmpty()) {
-			return;
-		}
+        if (getConfig().isAutoFixPolygonOrientation()) {
+            coordinates = GeoJsonUtils.fixPolygonOrientation(coordinates);
+        }
 
-		// Handle polygon orientation
-		if (GeoJsonConfig.getInstance().isValidatePolygonOrientation()) {
-			if (GeoJsonConfig.getInstance().isAutoFixPolygonOrientation()) {
-				// Auto-fix orientation
-				GeoJsonUtils.fixPolygonOrientation(coordinates);
-			} else {
-				// Validate orientation
-				try {
-					GeoJsonUtils.validatePolygonOrientation(coordinates);
-				} catch (IllegalArgumentException e) {
-					throw e;
-				}
-			}
-		} else {
-			// When validation is disabled but RFC 7946 compliance is enabled,
-			// we still want to fix the orientation for serialization tests
-			GeoJsonUtils.fixPolygonOrientation(coordinates);
-		}
-	}
+        if (getConfig().isValidatePolygonOrientation()) {
+            GeoJsonUtils.validatePolygonOrientation(coordinates);
+        }
+    }
 
-	private void assertExteriorRing() {
-		if (coordinates.isEmpty())
-			throw new RuntimeException("No exterior ring definied");
-	}
+    private void assertExteriorRing() {
+        if (coordinates.isEmpty())
+            throw new RuntimeException("No exterior ring defined");
+    }
 
-	@Override
-	public <T> T accept(GeoJsonObjectVisitor<T> geoJsonObjectVisitor) {
-		return geoJsonObjectVisitor.visit(this);
-	}
+    @Override
+    public <T> T accept(GeoJsonObjectVisitor<T> geoJsonObjectVisitor) {
+        return geoJsonObjectVisitor.visit(this);
+    }
 
-	@Override
-	public String toString() {
-		return buildToString("Polygon");
-	}
+    @Override
+    public String toString() {
+        return buildToString("Polygon");
+    }
 }

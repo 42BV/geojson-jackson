@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.geojson.util.TestResourceLoader;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -21,16 +20,12 @@ public class ComplexFeatureTest {
 
     @Before
     public void setUp() {
-        // Reset to default configuration before each test
-        GeoJsonConfig.useLegacyMode();
-        // Use RFC 7946 mapper but disable polygon orientation validation for tests
-        mapper = new GeoJsonMapper(true, false);
-    }
+        // Create a config with RFC 7946 compliance but disable polygon orientation validation
+        GeoJsonConfig config = new GeoJsonConfig();
+        config.setValidatePolygonOrientation(false);
 
-    @After
-    public void tearDown() {
-        // Reset to default configuration after each test
-        GeoJsonConfig.useLegacyMode();
+        // Use a mapper with this configuration
+        mapper = new GeoJsonMapper(config);
     }
 
     @Test

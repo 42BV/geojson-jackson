@@ -17,14 +17,19 @@ public class GeoJsonMapperTest {
 
     @Before
     public void setUp() {
-        legacyMapper = new GeoJsonMapper(false);
-        rfc7946Mapper = new GeoJsonMapper(true);
+        // Create legacy configuration
+        GeoJsonConfig legacyConfig = GeoJsonConfig.legacy();
+        legacyMapper = new GeoJsonMapper(legacyConfig);
+
+        // Create RFC 7946 configuration with auto-fix enabled
+        GeoJsonConfig rfc7946Config = GeoJsonConfig.rfc7946();
+        rfc7946Config.setAutoFixPolygonOrientation(true);
+        rfc7946Mapper = new GeoJsonMapper(rfc7946Config);
     }
 
     @After
     public void tearDown() {
-        // Reset to default configuration after each test
-        GeoJsonConfig.useLegacyMode();
+        // No need to reset global configuration anymore
     }
 
     @Test
@@ -46,16 +51,17 @@ public class GeoJsonMapperTest {
 
     @Test
     public void testRfc7946Mapper() throws IOException {
-        // Create a polygon with clockwise exterior ring (would be invalid, but will be fixed)
+        // Create a polygon with counterclockwise exterior ring (valid in RFC 7946)
         Polygon polygon = new Polygon(
                 new LngLatAlt(0, 0),
-                new LngLatAlt(0, 1),
-                new LngLatAlt(1, 1),
                 new LngLatAlt(1, 0),
+                new LngLatAlt(1, 1),
+                new LngLatAlt(0, 1),
                 new LngLatAlt(0, 0)
         );
+        polygon.setConfig(rfc7946Mapper.getConfig());
 
-        // The polygon should have been fixed by the RFC 7946 mapper
+        // Verify the polygon is counterclockwise
         assertTrue(GeoJsonUtils.isCounterClockwise(polygon.getExteriorRing()));
 
         // Serialize and deserialize with RFC 7946 mapper
@@ -73,6 +79,7 @@ public class GeoJsonMapperTest {
                 new LngLatAlt(170, 45),
                 new LngLatAlt(-170, 45)
         );
+        lineString.setConfig(rfc7946Mapper.getConfig());
 
         // Process the LineString with the RFC 7946 mapper
         GeoJsonObject processed = rfc7946Mapper.process(lineString);

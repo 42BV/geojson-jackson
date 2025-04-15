@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -21,94 +22,127 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
  * The "crs" member is deprecated in RFC 7946 but supported for backward compatibility.
  */
 @JsonTypeInfo(property = "type", use = Id.NAME)
-@JsonSubTypes({ @Type(Feature.class), @Type(Polygon.class), @Type(MultiPolygon.class), @Type(FeatureCollection.class),
-		@Type(Point.class), @Type(MultiPoint.class), @Type(MultiLineString.class), @Type(LineString.class),
-                @Type(GeometryCollection.class) })
+@JsonSubTypes({ @Type(Feature.class), @Type(Polygon.class), @Type(MultiPolygon.class), @Type(FeatureCollection.class), @Type(Point.class),
+        @Type(MultiPoint.class), @Type(MultiLineString.class), @Type(LineString.class), @Type(GeometryCollection.class) })
 @JsonInclude(Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public abstract class GeoJsonObject implements Serializable {
 
-	/**
-	 * The coordinate reference system.
-	 *
-	 * @deprecated The "crs" member is deprecated in RFC 7946. All GeoJSON coordinates should use WGS 84.
-	 */
-	@Deprecated
-	private Crs crs;
+    /**
+     * The configuration for this GeoJSON object.
+     * This is not serialized to JSON.
+     */
+    @JsonIgnore
+    private GeoJsonConfig config;
 
-	/**
-	 * The bounding box of the object.
-	 * The value of the bbox member is an array of length 2*n where n is the number of dimensions.
-	 * For 2D coordinates, the bbox is [west, south, east, north].
-	 */
-	private double[] bbox;
+    /**
+     * The coordinate reference system.
+     *
+     * @deprecated The "crs" member is deprecated in RFC 7946. All GeoJSON coordinates should use WGS 84.
+     */
+    @Deprecated
+    private Crs crs;
 
-	/**
-	 * Get the coordinate reference system.
-	 *
-	 * @return The CRS
-	 * @deprecated The "crs" member is deprecated in RFC 7946. All GeoJSON coordinates should use WGS 84.
-	 */
-	@Deprecated
-	public Crs getCrs() {
-		if (crs != null && GeoJsonConfig.getInstance().isRfc7946Compliance() &&
-				GeoJsonConfig.getInstance().isWarnOnCrsUse()) {
-			System.err.println("Warning: The 'crs' member is deprecated in RFC 7946. All GeoJSON coordinates should use WGS 84.");
-		}
-		return crs;
-	}
+    /**
+     * The bounding box of the object.
+     * The value of the bbox member is an array of length 2*n where n is the number of dimensions.
+     * For 2D coordinates, the bbox is [west, south, east, north].
+     */
+    private double[] bbox;
 
-	/**
-	 * Set the coordinate reference system.
-	 * @param crs The CRS to set
-	 * @deprecated The "crs" member is deprecated in RFC 7946. All GeoJSON coordinates should use WGS 84.
-	 */
-	@Deprecated
-	public void setCrs(Crs crs) {
-		if (crs != null && GeoJsonConfig.getInstance().isRfc7946Compliance() &&
-				GeoJsonConfig.getInstance().isWarnOnCrsUse()) {
-			System.err.println("Warning: The 'crs' member is deprecated in RFC 7946. All GeoJSON coordinates should use WGS 84.");
-		}
-		this.crs = crs;
-	}
+    /**
+     * Get the configuration for this GeoJSON object.
+     * If no configuration has been set, a default configuration is created.
+     *
+     * @return The configuration
+     */
+    public GeoJsonConfig getConfig() {
+        if (config == null) {
+            config = new GeoJsonConfig();
+        }
+        return config;
+    }
 
-	/**
-	 * Get the bounding box.
-	 * @return The bounding box
-	 */
-	public double[] getBbox() {
-		return bbox;
-	}
+    /**
+     * Set the configuration for this GeoJSON object.
+     *
+     * @param config The configuration to set
+     * @return This object for method chaining
+     */
+    public GeoJsonObject setConfig(GeoJsonConfig config) {
+        this.config = config;
+        return this;
+    }
 
-	/**
-	 * Set the bounding box.
-	 * @param bbox The bounding box to set
-	 */
-	public void setBbox(double[] bbox) {
-		this.bbox = bbox;
-	}
+    /**
+     * Get the coordinate reference system.
+     *
+     * @return The CRS
+     * @deprecated The "crs" member is deprecated in RFC 7946. All GeoJSON coordinates should use WGS 84.
+     */
+    @Deprecated
+    public Crs getCrs() {
+        if (crs != null && getConfig().isWarnOnCrsUse()) {
+            System.err.println("Warning: The 'crs' member is deprecated in RFC 7946. All GeoJSON coordinates should use WGS 84.");
+        }
+        return crs;
+    }
 
-	public abstract <T> T accept(GeoJsonObjectVisitor<T> geoJsonObjectVisitor);
+    /**
+     * Set the coordinate reference system.
+     *
+     * @param crs The CRS to set
+     * @deprecated The "crs" member is deprecated in RFC 7946. All GeoJSON coordinates should use WGS 84.
+     */
+    @Deprecated
+    public void setCrs(Crs crs) {
+        if (crs != null && getConfig().isWarnOnCrsUse()) {
+            System.err.println("Warning: The 'crs' member is deprecated in RFC 7946. All GeoJSON coordinates should use WGS 84.");
+        }
+        this.crs = crs;
+    }
 
-	@Override public boolean equals(Object o) {
-		if (this == o)
-			return true;
-		if (o == null || getClass() != o.getClass())
-			return false;
-		GeoJsonObject that = (GeoJsonObject)o;
-		if (!Objects.equals(crs, that.crs))
-			return false;
-		return Arrays.equals(bbox, that.bbox);
-	}
+    /**
+     * Get the bounding box.
+     *
+     * @return The bounding box
+     */
+    public double[] getBbox() {
+        return bbox;
+    }
 
-	@Override public int hashCode() {
-		int result = crs != null ? crs.hashCode() : 0;
-		result = 31 * result + (bbox != null ? Arrays.hashCode(bbox) : 0);
-		return result;
-	}
+    /**
+     * Set the bounding box.
+     *
+     * @param bbox The bounding box to set
+     */
+    public void setBbox(double[] bbox) {
+        this.bbox = bbox;
+    }
 
-	@Override
-	public String toString() {
-		return "GeoJsonObject{}";
-	}
+    public abstract <T> T accept(GeoJsonObjectVisitor<T> geoJsonObjectVisitor);
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+        GeoJsonObject that = (GeoJsonObject) o;
+        if (!Objects.equals(crs, that.crs))
+            return false;
+        return Arrays.equals(bbox, that.bbox);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = crs != null ? crs.hashCode() : 0;
+        result = 31 * result + (bbox != null ? Arrays.hashCode(bbox) : 0);
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "GeoJsonObject{}";
+    }
 }

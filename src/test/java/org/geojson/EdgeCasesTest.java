@@ -8,25 +8,19 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 public class EdgeCasesTest {
 
     private GeoJsonMapper mapper;
+    private GeoJsonConfig config;
 
     @Before
     public void setUp() {
-        // Reset to default configuration before each test
-        GeoJsonConfig.useLegacyMode();
-        mapper = new GeoJsonMapper(true);
-    }
-
-    @After
-    public void tearDown() {
-        // Reset to default configuration after each test
-        GeoJsonConfig.useLegacyMode();
+        // Create a new configuration for each test
+        config = GeoJsonConfig.rfc7946();
+        mapper = new GeoJsonMapper(config);
     }
 
     @Test
@@ -43,12 +37,12 @@ public class EdgeCasesTest {
 
         GeometryCollection emptyGeometryCollection = new GeometryCollection();
 
-        GeoJsonObject processedLineString = GeoJsonUtils.process(emptyLineString);
-        GeoJsonObject processedPolygon = GeoJsonUtils.process(emptyPolygon);
-        GeoJsonObject processedMultiPoint = GeoJsonUtils.process(emptyMultiPoint);
-        GeoJsonObject processedMultiLineString = GeoJsonUtils.process(emptyMultiLineString);
-        GeoJsonObject processedMultiPolygon = GeoJsonUtils.process(emptyMultiPolygon);
-        GeoJsonObject processedGeometryCollection = GeoJsonUtils.process(emptyGeometryCollection);
+        GeoJsonObject processedLineString = GeoJsonUtils.process(emptyLineString, config);
+        GeoJsonObject processedPolygon = GeoJsonUtils.process(emptyPolygon, config);
+        GeoJsonObject processedMultiPoint = GeoJsonUtils.process(emptyMultiPoint, config);
+        GeoJsonObject processedMultiLineString = GeoJsonUtils.process(emptyMultiLineString, config);
+        GeoJsonObject processedMultiPolygon = GeoJsonUtils.process(emptyMultiPolygon, config);
+        GeoJsonObject processedGeometryCollection = GeoJsonUtils.process(emptyGeometryCollection, config);
 
         assertTrue(processedLineString instanceof LineString);
         assertTrue(processedPolygon instanceof Polygon);
@@ -67,13 +61,13 @@ public class EdgeCasesTest {
 
     @Test
     public void testInvalidPolygonRings() {
-        GeoJsonConfig.getInstance()
-                .setRfc7946Compliance(true)
-                .setValidatePolygonOrientation(true)
+        // Configure for RFC 7946 with validation but no auto-fix
+        config.setValidatePolygonOrientation(true)
                 .setAutoFixPolygonOrientation(false);
 
         try {
             Polygon invalidPolygon = new Polygon();
+            invalidPolygon.setConfig(config);
             invalidPolygon.add(Arrays.asList(
                     new LngLatAlt(0, 0),
                     new LngLatAlt(1, 1),
@@ -86,6 +80,7 @@ public class EdgeCasesTest {
 
         try {
             Polygon unclosedPolygon = new Polygon();
+            unclosedPolygon.setConfig(config);
             unclosedPolygon.add(Arrays.asList(
                     new LngLatAlt(0, 0),
                     new LngLatAlt(1, 0),
