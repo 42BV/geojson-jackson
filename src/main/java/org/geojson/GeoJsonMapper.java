@@ -9,15 +9,31 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class GeoJsonMapper extends ObjectMapper {
 
     /**
-     * Creates a new GeoJsonMapper with default settings.
+     * The configuration for this mapper.
+     */
+    private GeoJsonConfig config;
+
+    /**
+     * Creates a new GeoJsonMapper with default settings (legacy mode).
      * By default, this uses the 2008 GeoJSON specification for backward compatibility.
      */
     public GeoJsonMapper() {
         super();
+        this.config = GeoJsonConfig.legacy();
     }
 
     /**
-     * Creates a new GeoJsonMapper with RFC 7946 compliance enabled.
+     * Creates a new GeoJsonMapper with the specified configuration.
+     *
+     * @param config The configuration to use
+     */
+    public GeoJsonMapper(GeoJsonConfig config) {
+        super();
+        this.config = config;
+    }
+
+    /**
+     * Creates a new GeoJsonMapper with RFC 7946 compliance enabled or disabled.
      *
      * @param rfc7946Compliance Whether to enable RFC 7946 compliance
      */
@@ -26,7 +42,7 @@ public class GeoJsonMapper extends ObjectMapper {
     }
 
     /**
-     * Creates a new GeoJsonMapper with RFC 7946 compliance enabled.
+     * Creates a new GeoJsonMapper with RFC 7946 compliance enabled or disabled.
      *
      * @param rfc7946Compliance          Whether to enable RFC 7946 compliance
      * @param validatePolygonOrientation Whether to validate polygon orientation
@@ -34,12 +50,30 @@ public class GeoJsonMapper extends ObjectMapper {
     public GeoJsonMapper(boolean rfc7946Compliance, boolean validatePolygonOrientation) {
         super();
         if (rfc7946Compliance) {
-            GeoJsonConfig.useRfc7946();
-            // Override polygon orientation validation if needed
-            GeoJsonConfig.getInstance().setValidatePolygonOrientation(validatePolygonOrientation);
-        } else {
-            GeoJsonConfig.useLegacyMode();
+            this.config = GeoJsonConfig.rfc7946().setValidatePolygonOrientation(validatePolygonOrientation);
+            return;
         }
+        this.config = GeoJsonConfig.legacy();
+    }
+
+    /**
+     * Gets the configuration for this mapper.
+     *
+     * @return The configuration
+     */
+    public GeoJsonConfig getConfig() {
+        return config;
+    }
+
+    /**
+     * Sets the configuration for this mapper.
+     *
+     * @param config The configuration to set
+     * @return This mapper for method chaining
+     */
+    public GeoJsonMapper setConfig(GeoJsonConfig config) {
+        this.config = config;
+        return this;
     }
 
     /**
@@ -52,6 +86,6 @@ public class GeoJsonMapper extends ObjectMapper {
      * @return The processed GeoJSON object
      */
     public GeoJsonObject process(GeoJsonObject object) {
-        return GeoJsonUtils.process(object);
+        return GeoJsonUtils.process(object, config);
     }
 }

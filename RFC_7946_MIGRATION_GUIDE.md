@@ -26,14 +26,21 @@ RFC 7946 (published in 2016) made several significant changes to the GeoJSON for
 
 ### Step 1: Enable RFC 7946 Compliance
 
-Use the `GeoJsonMapper` with RFC 7946 mode enabled or configure the global settings directly:
+Use the `GeoJsonMapper` with RFC 7946 mode enabled:
 
 ```java
-// Using the GeoJsonMapper
+// Using the GeoJsonMapper with RFC 7946 mode enabled
 GeoJsonMapper mapper = new GeoJsonMapper(true);
+```
 
-// Or configure global settings directly
-GeoJsonConfig.useRfc7946();
+Or create a custom configuration:
+
+```java
+// Create an RFC 7946 compliant configuration
+GeoJsonConfig config = GeoJsonConfig.rfc7946();
+
+// Create a mapper with this configuration
+GeoJsonMapper mapper = new GeoJsonMapper(config);
 ```
 
 ### Step 2: Remove Custom CRS Definitions
@@ -86,9 +93,23 @@ if(!GeoJsonUtils.isCounterClockwise(ring)){
 Alternatively, you can configure the library to automatically fix polygon orientation:
 
 ```java
-GeoJsonConfig.getInstance()
-.setValidatePolygonOrientation(true)
-.setAutoFixPolygonOrientation(true);
+// Create a configuration that auto-fixes polygon orientation
+GeoJsonConfig config = new GeoJsonConfig();
+config.
+
+setRfc7946Compliance(true)
+      .
+
+setValidatePolygonOrientation(true)
+      .
+
+setAutoFixPolygonOrientation(true);
+
+// Apply the configuration to your GeoJSON objects
+Polygon polygon = new Polygon();
+polygon.
+
+setConfig(config);
 ```
 
 ### Step 4: Handle Antimeridian Crossing
@@ -96,14 +117,20 @@ GeoJsonConfig.getInstance()
 For geometries that cross the antimeridian (180° longitude), use the `GeoJsonUtils` class or the `GeoJsonMapper`:
 
 ```java
-// Enable antimeridian cutting
-GeoJsonConfig.getInstance().setCutAntimeridian(true);
+// Create a configuration with antimeridian cutting enabled
+GeoJsonConfig config = new GeoJsonConfig();
+config.
 
-// Process a GeoJSON object using GeoJsonUtils
-GeoJsonObject processed = GeoJsonUtils.process(geoJsonObject);
+setRfc7946Compliance(true)
+      .
 
-// Or use the GeoJsonMapper
-GeoJsonMapper mapper = new GeoJsonMapper(true);
+setCutAntimeridian(true);
+
+// Process a GeoJSON object using GeoJsonUtils with this configuration
+GeoJsonObject processed = GeoJsonUtils.process(geoJsonObject, config);
+
+// Or use the GeoJsonMapper with this configuration
+GeoJsonMapper mapper = new GeoJsonMapper(config);
 GeoJsonObject processed = mapper.process(geoJsonObject);
 ```
 
@@ -137,27 +164,51 @@ GeoJsonMapper rfc7946Mapper = new GeoJsonMapper(true);
 When using RFC 7946 compliance mode, you'll see warnings if you use the deprecated `crs` property. To disable these warnings:
 
 ```java
-GeoJsonConfig
-        .getInstance()
-        .setRfc7946Compliance(true)
-        .setWarnOnCrsUse(false);
+// Create a configuration with CRS warnings disabled
+GeoJsonConfig config = new GeoJsonConfig();
+config.
+
+setRfc7946Compliance(true)
+      .
+
+setWarnOnCrsUse(false);
+
+// Apply the configuration to your GeoJSON objects
+Point point = new Point(100, 0);
+point.
+
+setConfig(config);
 ```
 
 ### Polygon Validation Errors
 
 If you get `IllegalArgumentException` errors about polygon ring orientation, you need to fix the orientation of your rings. See Step 3 above.
 
-### Global Configuration
+### Multiple Configurations
 
-The GeoJsonConfig is a singleton with global state. If you're in a multi-threaded environment and need different configurations for different threads, you
-should be careful about changing the configuration. Consider using separate instances of GeoJsonMapper instead:
+One of the advantages of the new configuration system is that you can have multiple configurations active at the same time. This is especially useful in
+multi-threaded environments:
 
 ```java
 // Create mappers with different configurations
-GeoJsonMapper legacyMapper = new GeoJsonMapper(false);
-GeoJsonMapper rfc7946Mapper = new GeoJsonMapper(true);
+GeoJsonConfig legacyConfig = GeoJsonConfig.legacy();
+GeoJsonConfig rfc7946Config = GeoJsonConfig.rfc7946();
+
+GeoJsonMapper legacyMapper = new GeoJsonMapper(legacyConfig);
+GeoJsonMapper rfc7946Mapper = new GeoJsonMapper(rfc7946Config);
 
 // Use the appropriate mapper for each task
 GeoJsonObject legacyObject = legacyMapper.readValue(inputStream, GeoJsonObject.class);
 GeoJsonObject rfc7946Object = rfc7946Mapper.readValue(inputStream, GeoJsonObject.class);
+
+// You can also apply configurations directly to GeoJSON objects
+Polygon legacyPolygon = new Polygon();
+legacyPolygon.
+
+setConfig(legacyConfig);
+
+Polygon rfc7946Polygon = new Polygon();
+rfc7946Polygon.
+
+setConfig(rfc7946Config);
 ```

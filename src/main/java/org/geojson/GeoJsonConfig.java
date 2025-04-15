@@ -6,15 +6,6 @@ package org.geojson;
  */
 public class GeoJsonConfig {
 
-    private static final GeoJsonConfig INSTANCE = new GeoJsonConfig();
-
-    /**
-     * Whether to enforce RFC 7946 compliance.
-     * When true, certain validations and behaviors will follow the RFC 7946 specification.
-     * When false, the library will follow the 2008 GeoJSON specification.
-     */
-    private boolean rfc7946Compliance = false;
-
     /**
      * Whether to validate polygon ring orientation according to the right-hand rule.
      * RFC 7946 requires exterior rings to be counterclockwise and interior rings to be clockwise.
@@ -41,45 +32,40 @@ public class GeoJsonConfig {
     private boolean autoFixPolygonOrientation = false;
 
     /**
-     * Private constructor to prevent instantiation.
+     * Creates a new GeoJsonConfig with default settings (legacy mode).
      */
-    private GeoJsonConfig() {
+    public GeoJsonConfig() {
     }
 
     /**
-     * Get the singleton instance.
+     * Creates a new GeoJsonConfig with RFC 7946 compliance settings.
+     *
+     * @param rfc7946Compliance Whether to enable RFC 7946 compliance
      */
-    public static GeoJsonConfig getInstance() {
-        return INSTANCE;
+    public GeoJsonConfig(boolean rfc7946Compliance) {
+        if (rfc7946Compliance) {
+            this.setValidatePolygonOrientation(true);
+            this.autoFixPolygonOrientation = true;
+            this.cutAntimeridian = true;
+        }
     }
 
     /**
-     * Configure for RFC 7946 compliance.
+     * Creates a new RFC 7946 compliant configuration.
+     *
+     * @return A new configuration with RFC 7946 compliance enabled
      */
-    public static void useRfc7946() {
-        GeoJsonConfig config = getInstance();
-        config.setRfc7946Compliance(true);
-        config.setValidatePolygonOrientation(true);
-        config.setCutAntimeridian(true);
+    public static GeoJsonConfig rfc7946() {
+        return new GeoJsonConfig(true);
     }
 
     /**
-     * Configure for 2008 GeoJSON specification (legacy mode).
+     * Creates a new legacy mode (2008 GeoJSON specification) configuration.
+     *
+     * @return A new configuration with legacy mode enabled
      */
-    public static void useLegacyMode() {
-        GeoJsonConfig config = getInstance();
-        config.setRfc7946Compliance(false);
-        config.setValidatePolygonOrientation(false);
-        config.setCutAntimeridian(false);
-    }
-
-    public boolean isRfc7946Compliance() {
-        return rfc7946Compliance;
-    }
-
-    public GeoJsonConfig setRfc7946Compliance(boolean rfc7946Compliance) {
-        this.rfc7946Compliance = rfc7946Compliance;
-        return this;
+    public static GeoJsonConfig legacy() {
+        return new GeoJsonConfig(false);
     }
 
     public boolean isValidatePolygonOrientation() {

@@ -8,7 +8,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -19,17 +18,16 @@ public class SerializationTest {
 
     @Before
     public void setUp() {
-        // Reset to default configuration before each test
-        GeoJsonConfig.useLegacyMode();
-        legacyMapper = new GeoJsonMapper(false);
-        // Use RFC 7946 mapper but disable polygon orientation validation for tests
-        rfc7946Mapper = new GeoJsonMapper(true, false);
-    }
+        // Create legacy configuration
+        GeoJsonConfig legacyConfig = GeoJsonConfig.legacy();
+        legacyMapper = new GeoJsonMapper(legacyConfig);
 
-    @After
-    public void tearDown() {
-        // Reset to default configuration after each test
-        GeoJsonConfig.useLegacyMode();
+        // Create RFC 7946 configuration with auto-fix enabled
+        GeoJsonConfig rfc7946Config = GeoJsonConfig.rfc7946()
+                .setValidatePolygonOrientation(true)
+                .setAutoFixPolygonOrientation(true);
+
+        rfc7946Mapper = new GeoJsonMapper(rfc7946Config);
     }
 
     @Test
@@ -76,7 +74,14 @@ public class SerializationTest {
 
     @Test
     public void testPolygonSerialization() throws IOException {
+        // Create a special mapper with auto-fix disabled for this test
+        GeoJsonConfig testConfig = GeoJsonConfig.rfc7946()
+                .setValidatePolygonOrientation(true)
+                .setAutoFixPolygonOrientation(false);
+        GeoJsonMapper testMapper = new GeoJsonMapper(testConfig);
+
         Polygon polygon = new Polygon();
+        polygon.setConfig(testConfig); // Use the test config with auto-fix disabled
         polygon.add(Arrays.asList(
                 new LngLatAlt(0, 0),
                 new LngLatAlt(10, 0),
@@ -84,11 +89,12 @@ public class SerializationTest {
                 new LngLatAlt(0, 10),
                 new LngLatAlt(0, 0)
         ));
+        // Interior ring must be clockwise for RFC 7946
         polygon.addInteriorRing(
                 new LngLatAlt(2, 2),
-                new LngLatAlt(8, 2),
-                new LngLatAlt(8, 8),
                 new LngLatAlt(2, 8),
+                new LngLatAlt(8, 8),
+                new LngLatAlt(8, 2),
                 new LngLatAlt(2, 2)
         );
 
@@ -99,15 +105,34 @@ public class SerializationTest {
         assertEquals(5, legacyPolygon.getExteriorRing().size());
         assertEquals(5, legacyPolygon.getInteriorRing(0).size());
 
-        String rfc7946Json = rfc7946Mapper.writeValueAsString(polygon);
+        String testJson = testMapper.writeValueAsString(polygon);
 
-        Polygon rfc7946Polygon = rfc7946Mapper.readValue(rfc7946Json, Polygon.class);
-        assertEquals(2, rfc7946Polygon.getCoordinates().size());
-        assertEquals(5, rfc7946Polygon.getExteriorRing().size());
-        assertEquals(5, rfc7946Polygon.getInteriorRing(0).size());
+        Polygon testPolygon = testMapper.readValue(testJson, Polygon.class);
+        assertEquals(2, testPolygon.getCoordinates().size());
+        assertEquals(5, testPolygon.getExteriorRing().size());
+        assertEquals(5, testPolygon.getInteriorRing(0).size());
 
-        assertTrue(GeoJsonUtils.isCounterClockwise(rfc7946Polygon.getExteriorRing()));
-        assertFalse(GeoJsonUtils.isCounterClockwise(rfc7946Polygon.getInteriorRing(0)));
+        // Now test with the regular RFC 7946 mapper (with auto-fix enabled)
+        Polygon autoFixPolygon = new Polygon();
+        autoFixPolygon.setConfig(rfc7946Mapper.getConfig());
+        autoFixPolygon.add(Arrays.asList(
+                new LngLatAlt(0, 0),
+                new LngLatAlt(10, 0),
+                new LngLatAlt(10, 10),
+                new LngLatAlt(0, 10),
+                new LngLatAlt(0, 0)
+        ));
+        // Interior ring must be clockwise for RFC 7946
+        autoFixPolygon.addInteriorRing(
+                new LngLatAlt(2, 2),
+                new LngLatAlt(2, 8),
+                new LngLatAlt(8, 8),
+                new LngLatAlt(8, 2),
+                new LngLatAlt(2, 2)
+        );
+
+        assertTrue(GeoJsonUtils.isCounterClockwise(autoFixPolygon.getExteriorRing()));
+        assertFalse(GeoJsonUtils.isCounterClockwise(autoFixPolygon.getInteriorRing(0)));
     }
 
     @Test
@@ -231,6 +256,7 @@ public class SerializationTest {
     public void testCrossDeserialization() throws IOException {
         // Create a Polygon with a hole
         Polygon polygon = new Polygon();
+        polygon.setConfig(rfc7946Mapper.getConfig());
         polygon.add(Arrays.asList(
                 new LngLatAlt(0, 0),
                 new LngLatAlt(10, 0),
