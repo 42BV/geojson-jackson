@@ -83,17 +83,10 @@ GeoJsonObject processed = mapper.process(geoJsonObject);
 You can also create a mapper with a specific configuration:
 
 ```java
-// Create a custom configuration
-GeoJsonConfig config = new GeoJsonConfig();
-config.
-
-setRfc7946Compliance(true)
-      .
-
-setValidatePolygonOrientation(true)
-      .
-
-setAutoFixPolygonOrientation(true);
+// Create a custom configuration based on RFC 7946
+GeoJsonConfig config = GeoJsonConfig.rfc7946()
+                .setValidatePolygonOrientation(true)
+                .setAutoFixPolygonOrientation(true);
 
 // Create a mapper with the custom configuration
 GeoJsonMapper mapper = new GeoJsonMapper(config);
@@ -108,27 +101,24 @@ String json = mapper.writeValueAsString(featureCollection);
 You can customize the RFC 7946 compliance behavior using the `GeoJsonConfig` class:
 
 ```java
-// Create a new configuration
-GeoJsonConfig config = new GeoJsonConfig();
+// Create a new RFC 7946 compliant configuration
+GeoJsonConfig config = GeoJsonConfig.rfc7946();
 
-// Enable RFC 7946 compliance
-config.
-
-setRfc7946Compliance(true)
-// Validate polygon ring orientation
-      .
+// Customize the configuration
+config
+        .
 
 setValidatePolygonOrientation(true)
 // Automatically fix polygon orientation instead of throwing exceptions
-      .
+    .
 
 setAutoFixPolygonOrientation(true)
-// Enable antimeridian cutting
-      .
+// Enable antimeridian cutting (already enabled by default in rfc7946 mode)
+    .
 
 setCutAntimeridian(true)
 // Disable warnings when CRS is used
-      .
+    .
 
 setWarnOnCrsUse(false);
 
@@ -158,16 +148,9 @@ You can choose to either validate orientation (which throws exceptions for inval
 
 ```java
 // Create a configuration that validates orientation (throws exceptions for invalid rings)
-GeoJsonConfig config = new GeoJsonConfig();
-config.
-
-setRfc7946Compliance(true)
-      .
-
-setValidatePolygonOrientation(true)
-      .
-
-setAutoFixPolygonOrientation(false);
+GeoJsonConfig config = GeoJsonConfig.rfc7946()
+                .setValidatePolygonOrientation(true)
+                .setAutoFixPolygonOrientation(false);
 
 // Apply the configuration to a polygon
 Polygon polygon = new Polygon();
@@ -176,16 +159,9 @@ polygon.
 setConfig(config);
 
 // Or create a configuration that auto-fixes orientation (silently fixes invalid rings)
-GeoJsonConfig autoFixConfig = new GeoJsonConfig();
-autoFixConfig.
-
-setRfc7946Compliance(true)
-            .
-
-setValidatePolygonOrientation(true)
-            .
-
-setAutoFixPolygonOrientation(true);
+GeoJsonConfig autoFixConfig = GeoJsonConfig.rfc7946()
+        .setValidatePolygonOrientation(true)
+        .setAutoFixPolygonOrientation(true);
 
 // Apply the configuration to another polygon
 Polygon anotherPolygon = new Polygon();
@@ -200,18 +176,10 @@ RFC 7946 recommends cutting geometries that cross the antimeridian. You can enab
 
 ```java
 // Create a configuration with antimeridian cutting enabled
-GeoJsonConfig config = new GeoJsonConfig();
-config.
+GeoJsonConfig config = GeoJsonConfig.rfc7946()
+                .setCutAntimeridian(true); // Already enabled by default in rfc7946 mode
 
-setRfc7946Compliance(true)
-      .
-
-setCutAntimeridian(true);
-
-// Process a GeoJSON object using the configuration
-GeoJsonObject processed = GeoJsonUtils.process(geoJsonObject, config);
-
-// Or use a GeoJsonMapper with this configuration
+// Process a GeoJSON object using GeoJsonMapper with this configuration
 GeoJsonMapper mapper = new GeoJsonMapper(config);
 GeoJsonObject processed = mapper.process(geoJsonObject);
 ```

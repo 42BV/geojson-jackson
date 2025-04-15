@@ -81,12 +81,16 @@ Polygon polygon = new Polygon(
         );
 ```
 
-If you need to fix ring orientation programmatically, you can use the `GeoJsonUtils` utility:
+If you need to fix ring orientation programmatically, you can use the `PolygonOrientationUtils` utility:
 
 ```java
 List<LngLatAlt> ring = polygon.getExteriorRing();
-if(!GeoJsonUtils.isCounterClockwise(ring)){
-        GeoJsonUtils.reverseRing(ring);
+if(!PolygonOrientationUtils.
+
+isCounterClockwise(ring)){
+        PolygonOrientationUtils.
+
+reverseRing(ring);
 }
 ```
 
@@ -94,16 +98,9 @@ Alternatively, you can configure the library to automatically fix polygon orient
 
 ```java
 // Create a configuration that auto-fixes polygon orientation
-GeoJsonConfig config = new GeoJsonConfig();
-config.
-
-setRfc7946Compliance(true)
-      .
-
-setValidatePolygonOrientation(true)
-      .
-
-setAutoFixPolygonOrientation(true);
+GeoJsonConfig config = GeoJsonConfig.rfc7946()
+                .setValidatePolygonOrientation(true)
+                .setAutoFixPolygonOrientation(true);
 
 // Apply the configuration to your GeoJSON objects
 Polygon polygon = new Polygon();
@@ -114,22 +111,14 @@ setConfig(config);
 
 ### Step 4: Handle Antimeridian Crossing
 
-For geometries that cross the antimeridian (180° longitude), use the `GeoJsonUtils` class or the `GeoJsonMapper`:
+For geometries that cross the antimeridian (180° longitude), use the `GeoJsonMapper`:
 
 ```java
 // Create a configuration with antimeridian cutting enabled
-GeoJsonConfig config = new GeoJsonConfig();
-config.
+GeoJsonConfig config = GeoJsonConfig.rfc7946()
+                .setCutAntimeridian(true); // Already enabled by default in rfc7946 mode
 
-setRfc7946Compliance(true)
-      .
-
-setCutAntimeridian(true);
-
-// Process a GeoJSON object using GeoJsonUtils with this configuration
-GeoJsonObject processed = GeoJsonUtils.process(geoJsonObject, config);
-
-// Or use the GeoJsonMapper with this configuration
+// Process a GeoJSON object using GeoJsonMapper with this configuration
 GeoJsonMapper mapper = new GeoJsonMapper(config);
 GeoJsonObject processed = mapper.process(geoJsonObject);
 ```
@@ -165,13 +154,8 @@ When using RFC 7946 compliance mode, you'll see warnings if you use the deprecat
 
 ```java
 // Create a configuration with CRS warnings disabled
-GeoJsonConfig config = new GeoJsonConfig();
-config.
-
-setRfc7946Compliance(true)
-      .
-
-setWarnOnCrsUse(false);
+GeoJsonConfig config = GeoJsonConfig.rfc7946()
+                .setWarnOnCrsUse(false);
 
 // Apply the configuration to your GeoJSON objects
 Point point = new Point(100, 0);
