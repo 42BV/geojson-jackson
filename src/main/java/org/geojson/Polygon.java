@@ -127,6 +127,6 @@ public class Polygon extends Geometry<List<LngLatAlt>> {
 
 	@Override
 	public String toString() {
-		return "Polygon{} " + super.toString();
+		return buildToString("Polygon");
 	}
 }

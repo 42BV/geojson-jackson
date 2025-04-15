@@ -1,7 +1,9 @@
 package org.geojson;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 public abstract class Geometry<T> extends GeoJsonObject {
 
@@ -11,9 +13,7 @@ public abstract class Geometry<T> extends GeoJsonObject {
 	}
 
 	public Geometry(T... elements) {
-		for (T coordinate : elements) {
-			coordinates.add(coordinate);
-		}
+        Collections.addAll(coordinates, elements);
 	}
 
 	public Geometry<T> add(T elements) {
@@ -42,7 +42,7 @@ public abstract class Geometry<T> extends GeoJsonObject {
 			return false;
 		}
 		Geometry geometry = (Geometry)o;
-		return !(coordinates != null ? !coordinates.equals(geometry.coordinates) : geometry.coordinates != null);
+		return !(!Objects.equals(coordinates, geometry.coordinates));
 	}
 
 	@Override
@@ -50,6 +50,16 @@ public abstract class Geometry<T> extends GeoJsonObject {
 		int result = super.hashCode();
 		result = 31 * result + (coordinates != null ? coordinates.hashCode() : 0);
 		return result;
+	}
+
+	/**
+	 * Helper method for subclasses to create a consistent toString() implementation.
+	 *
+	 * @param className The name of the class
+	 * @return A string representation of the object
+	 */
+	protected String buildToString(String className) {
+		return className + "{} " + "Geometry{" + "coordinates=" + coordinates + "} " + super.toString();
 	}
 
 	@Override
