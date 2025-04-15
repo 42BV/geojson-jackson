@@ -62,6 +62,26 @@ public class GeoJsonUtils {
     }
 
     /**
+     * Validates that a ring is closed (first and last points are the same).
+     *
+     * @param ring     The ring to validate
+     * @param ringName The name of the ring for error messages
+     * @throws IllegalArgumentException if the ring is not closed
+     */
+    private static void validateRingClosed(List<LngLatAlt> ring, String ringName) {
+        if (ring == null || ring.size() < 4) {
+            throw new IllegalArgumentException(ringName + " must have at least 4 points (3 unique points + closure)");
+        }
+
+        // Validate that the ring is closed (first and last points are the same)
+        LngLatAlt first = ring.get(0);
+        LngLatAlt last = ring.get(ring.size() - 1);
+        if (first.getLongitude() != last.getLongitude() || first.getLatitude() != last.getLatitude()) {
+            throw new IllegalArgumentException(ringName + " must be closed (first and last points must be the same)");
+        }
+    }
+
+    /**
      * Validates that the exterior ring is counterclockwise and interior rings are clockwise.
      *
      * @param rings The list of rings to validate
@@ -74,18 +94,7 @@ public class GeoJsonUtils {
 
         // Exterior ring should be counterclockwise
         List<LngLatAlt> exteriorRing = rings.get(0);
-
-        // Validate that the ring has at least 4 points (3 unique points + closure)
-        if (exteriorRing == null || exteriorRing.size() < 4) {
-            throw new IllegalArgumentException("Exterior ring must have at least 4 points (3 unique points + closure)");
-        }
-
-        // Validate that the ring is closed (first and last points are the same)
-        LngLatAlt first = exteriorRing.get(0);
-        LngLatAlt last = exteriorRing.get(exteriorRing.size() - 1);
-        if (first.getLongitude() != last.getLongitude() || first.getLatitude() != last.getLatitude()) {
-            throw new IllegalArgumentException("Exterior ring must be closed (first and last points must be the same)");
-        }
+        validateRingClosed(exteriorRing, "Exterior ring");
 
         // Validate orientation
         if (!isCounterClockwise(exteriorRing)) {
@@ -95,18 +104,7 @@ public class GeoJsonUtils {
         // Interior rings should be clockwise
         for (int i = 1; i < rings.size(); i++) {
             List<LngLatAlt> interiorRing = rings.get(i);
-
-            // Validate that the ring has at least 4 points
-            if (interiorRing == null || interiorRing.size() < 4) {
-                throw new IllegalArgumentException("Interior ring " + i + " must have at least 4 points (3 unique points + closure)");
-            }
-
-            // Validate that the ring is closed
-            first = interiorRing.get(0);
-            last = interiorRing.get(interiorRing.size() - 1);
-            if (first.getLongitude() != last.getLongitude() || first.getLatitude() != last.getLatitude()) {
-                throw new IllegalArgumentException("Interior ring " + i + " must be closed (first and last points must be the same)");
-            }
+            validateRingClosed(interiorRing, "Interior ring " + i);
 
             // Validate orientation
             if (isCounterClockwise(interiorRing)) {
@@ -235,7 +233,41 @@ public class GeoJsonUtils {
     }
 
     /**
+     * Checks if a polygon crosses the antimeridian.
+     *
+     * @param rings The list of rings to check
+     * @return true if any ring crosses the antimeridian, false otherwise
+     */
+    private static boolean polygonCrossesAntimeridian(List<List<LngLatAlt>> rings) {
+        for (List<LngLatAlt> ring : rings) {
+            for (int i = 1; i < ring.size(); i++) {
+                if (crossesAntimeridian(ring.get(i - 1), ring.get(i))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Creates a polygon from a list of rings.
+     *
+     * @param rings The list of rings to create a polygon from
+     * @return A new Polygon containing the rings
+     */
+    private static Polygon createPolygonFromRings(List<List<LngLatAlt>> rings) {
+        Polygon polygon = new Polygon();
+        for (List<LngLatAlt> ring : rings) {
+            polygon.add(ring);
+        }
+        return polygon;
+    }
+
+    /**
      * Cuts a Polygon that crosses the antimeridian into a MultiPolygon.
+     *
+     * This implementation uses a simplified approach that splits the polygon
+     * based on which side of the antimeridian the majority of its points lie.
      *
      * @param polygon The Polygon to cut
      * @return A MultiPolygon if the Polygon crosses the antimeridian, otherwise the original Polygon
@@ -246,48 +278,23 @@ public class GeoJsonUtils {
             return polygon;
         }
 
-        boolean crossesAntimeridian = false;
-        for (List<LngLatAlt> ring : rings) {
-            for (int i = 1; i < ring.size(); i++) {
-                if (crossesAntimeridian(ring.get(i - 1), ring.get(i))) {
-                    crossesAntimeridian = true;
-                    break;
-                }
-            }
-            if (crossesAntimeridian) {
-                break;
-            }
-        }
-
-        if (!crossesAntimeridian) {
+        // Check if the polygon crosses the antimeridian
+        if (!polygonCrossesAntimeridian(rings)) {
             return polygon;
         }
 
-        // For simplicity, we'll just create a placeholder implementation
-        // A full implementation would be more complex and require cutting the polygon
-        // along the antimeridian and creating two separate polygons
-
-        MultiPolygon multiPolygon = new MultiPolygon();
-
-        // This is a simplified approach - a real implementation would need to properly
-        // cut the polygon along the antimeridian
+        // Split rings into east and west hemispheres
         List<List<LngLatAlt>> eastRings = new ArrayList<>();
         List<List<LngLatAlt>> westRings = new ArrayList<>();
 
-        // For now, we'll just split the polygon based on which side of the antimeridian
-        // the majority of its points lie
         for (List<LngLatAlt> ring : rings) {
-            int eastCount = 0;
-            int westCount = 0;
+            // Count points in each hemisphere
+            long eastCount = ring.stream()
+                    .filter(point -> point.getLongitude() > 0)
+                    .count();
+            long westCount = ring.size() - eastCount;
 
-            for (LngLatAlt point : ring) {
-                if (point.getLongitude() > 0) {
-                    eastCount++;
-                } else {
-                    westCount++;
-                }
-            }
-
+            // Assign to the hemisphere with the majority of points
             if (eastCount > westCount) {
                 eastRings.add(ring);
             } else {
@@ -295,20 +302,15 @@ public class GeoJsonUtils {
             }
         }
 
+        // Create the MultiPolygon from the east and west rings
+        MultiPolygon multiPolygon = new MultiPolygon();
+
         if (!eastRings.isEmpty()) {
-            Polygon eastPolygon = new Polygon();
-            for (List<LngLatAlt> ring : eastRings) {
-                eastPolygon.add(ring);
-            }
-            multiPolygon.add(eastPolygon);
+            multiPolygon.add(createPolygonFromRings(eastRings));
         }
 
         if (!westRings.isEmpty()) {
-            Polygon westPolygon = new Polygon();
-            for (List<LngLatAlt> ring : westRings) {
-                westPolygon.add(ring);
-            }
-            multiPolygon.add(westPolygon);
+            multiPolygon.add(createPolygonFromRings(westRings));
         }
 
         return multiPolygon;
