@@ -6,6 +6,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
+import org.geojson.util.PolygonOrientationUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -62,14 +63,14 @@ public class GeoJsonMapperTest {
         polygon.setConfig(rfc7946Mapper.getConfig());
 
         // Verify the polygon is counterclockwise
-        assertTrue(GeoJsonUtils.isCounterClockwise(polygon.getExteriorRing()));
+        assertTrue(PolygonOrientationUtils.isCounterClockwise(polygon.getExteriorRing()));
 
         // Serialize and deserialize with RFC 7946 mapper
         String json = rfc7946Mapper.writeValueAsString(polygon);
         Polygon deserializedPolygon = rfc7946Mapper.readValue(json, Polygon.class);
 
         // The polygon orientation should be preserved
-        assertTrue(GeoJsonUtils.isCounterClockwise(deserializedPolygon.getExteriorRing()));
+        assertTrue(PolygonOrientationUtils.isCounterClockwise(deserializedPolygon.getExteriorRing()));
     }
 
     @Test

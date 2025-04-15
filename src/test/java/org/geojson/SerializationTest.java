@@ -8,6 +8,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.geojson.util.PolygonOrientationUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -131,8 +132,8 @@ public class SerializationTest {
                 new LngLatAlt(2, 2)
         );
 
-        assertTrue(GeoJsonUtils.isCounterClockwise(autoFixPolygon.getExteriorRing()));
-        assertFalse(GeoJsonUtils.isCounterClockwise(autoFixPolygon.getInteriorRing(0)));
+        assertTrue(PolygonOrientationUtils.isCounterClockwise(autoFixPolygon.getExteriorRing()));
+        assertFalse(PolygonOrientationUtils.isCounterClockwise(autoFixPolygon.getInteriorRing(0)));
     }
 
     @Test
@@ -280,8 +281,8 @@ public class SerializationTest {
         assertEquals(2, crossPolygon1.getCoordinates().size());
 
         // Verify orientation was fixed
-        assertTrue(GeoJsonUtils.isCounterClockwise(crossPolygon1.getExteriorRing()));
-        assertFalse(GeoJsonUtils.isCounterClockwise(crossPolygon1.getInteriorRing(0)));
+        assertTrue(PolygonOrientationUtils.isCounterClockwise(crossPolygon1.getExteriorRing()));
+        assertFalse(PolygonOrientationUtils.isCounterClockwise(crossPolygon1.getInteriorRing(0)));
 
         // Serialize with RFC 7946 mapper
         String rfc7946Json = rfc7946Mapper.writeValueAsString(polygon);

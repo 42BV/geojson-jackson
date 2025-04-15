@@ -3,6 +3,8 @@ package org.geojson;
 import java.util.Arrays;
 import java.util.List;
 
+import org.geojson.util.PolygonOrientationUtils;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
@@ -107,11 +109,11 @@ public class Polygon extends Geometry<List<LngLatAlt>> {
         }
 
         if (getConfig().isAutoFixPolygonOrientation()) {
-            coordinates = GeoJsonUtils.fixPolygonOrientation(coordinates);
+            coordinates = PolygonOrientationUtils.fixPolygonOrientation(coordinates);
         }
 
         if (getConfig().isValidatePolygonOrientation()) {
-            GeoJsonUtils.validatePolygonOrientation(coordinates);
+            PolygonOrientationUtils.validatePolygonOrientation(coordinates);
         }
     }
 

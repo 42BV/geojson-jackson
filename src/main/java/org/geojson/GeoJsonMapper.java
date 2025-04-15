@@ -86,6 +86,6 @@ public class GeoJsonMapper extends ObjectMapper {
      * @return The processed GeoJSON object
      */
     public GeoJsonObject process(GeoJsonObject object) {
-        return GeoJsonUtils.process(object, config);
+        return GeoJsonProcessor.process(object, config);
     }
 }
