@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 import org.geojson.LngLatAlt;
 import org.geojson.MultiPolygon;
 import org.geojson.Polygon;
+import org.geojson.util.JsonTestUtils;
 import org.geojson.util.TestResourceLoader;
 import org.junit.Test;
 
@@ -23,7 +24,7 @@ public class MultiPoligonTest {
 		polygon.addInteriorRing(MockData.INTERNAL);
 		multiPolygon.add(polygon);
         String expectedJson = TestResourceLoader.loadJson("json/multipolygon/multipolygon.json");
-        assertEquals(expectedJson, mapper.writeValueAsString(multiPolygon));
+		JsonTestUtils.jsonEquals(expectedJson, mapper.writeValueAsString(multiPolygon));
 	}
 
 	@Test

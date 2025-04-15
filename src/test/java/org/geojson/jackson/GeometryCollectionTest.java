@@ -1,6 +1,5 @@
 package org.geojson.jackson;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -9,6 +8,7 @@ import org.geojson.GeometryCollection;
 import org.geojson.LineString;
 import org.geojson.LngLatAlt;
 import org.geojson.Point;
+import org.geojson.util.JsonTestUtils;
 import org.geojson.util.TestResourceLoader;
 import org.junit.Test;
 
@@ -24,7 +24,7 @@ public class GeometryCollectionTest {
 		gc.add(new Point(100, 0));
 		gc.add(new LineString(new LngLatAlt(101, 0), new LngLatAlt(102, 1)));
 		String expectedJson = TestResourceLoader.loadJson("json/geometrycollection/geometry_collection.json");
-		assertEquals(expectedJson, mapper.writeValueAsString(gc));
+		JsonTestUtils.jsonEquals(expectedJson, mapper.writeValueAsString(gc));
 	}
 
 	@Test
