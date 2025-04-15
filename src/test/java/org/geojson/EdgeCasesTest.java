@@ -37,12 +37,12 @@ public class EdgeCasesTest {
 
         GeometryCollection emptyGeometryCollection = new GeometryCollection();
 
-        GeoJsonObject processedLineString = GeoJsonUtils.process(emptyLineString, config);
-        GeoJsonObject processedPolygon = GeoJsonUtils.process(emptyPolygon, config);
-        GeoJsonObject processedMultiPoint = GeoJsonUtils.process(emptyMultiPoint, config);
-        GeoJsonObject processedMultiLineString = GeoJsonUtils.process(emptyMultiLineString, config);
-        GeoJsonObject processedMultiPolygon = GeoJsonUtils.process(emptyMultiPolygon, config);
-        GeoJsonObject processedGeometryCollection = GeoJsonUtils.process(emptyGeometryCollection, config);
+        GeoJsonObject processedLineString = GeoJsonProcessor.process(emptyLineString, config);
+        GeoJsonObject processedPolygon = GeoJsonProcessor.process(emptyPolygon, config);
+        GeoJsonObject processedMultiPoint = GeoJsonProcessor.process(emptyMultiPoint, config);
+        GeoJsonObject processedMultiLineString = GeoJsonProcessor.process(emptyMultiLineString, config);
+        GeoJsonObject processedMultiPolygon = GeoJsonProcessor.process(emptyMultiPolygon, config);
+        GeoJsonObject processedGeometryCollection = GeoJsonProcessor.process(emptyGeometryCollection, config);
 
         assertTrue(processedLineString instanceof LineString);
         assertTrue(processedPolygon instanceof Polygon);

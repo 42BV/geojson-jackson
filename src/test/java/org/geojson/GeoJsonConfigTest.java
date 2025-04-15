@@ -9,6 +9,7 @@ import static org.junit.Assert.fail;
 import java.util.Arrays;
 import java.util.List;
 
+import org.geojson.util.PolygonOrientationUtils;
 import org.junit.Test;
 
 public class GeoJsonConfigTest {
@@ -81,8 +82,8 @@ public class GeoJsonConfigTest {
             );
 
             // Verify it's actually clockwise
-            if (GeoJsonUtils.isCounterClockwise(clockwiseRing)) {
-                GeoJsonUtils.reverseRing(clockwiseRing);
+            if (PolygonOrientationUtils.isCounterClockwise(clockwiseRing)) {
+                PolygonOrientationUtils.reverseRing(clockwiseRing);
             }
 
             // Set RFC 7946 config with validation
@@ -120,15 +121,15 @@ public class GeoJsonConfigTest {
         );
 
         // Verify it's actually clockwise
-        if (GeoJsonUtils.isCounterClockwise(clockwiseRing)) {
-            GeoJsonUtils.reverseRing(clockwiseRing);
+        if (PolygonOrientationUtils.isCounterClockwise(clockwiseRing)) {
+            PolygonOrientationUtils.reverseRing(clockwiseRing);
         }
 
         // Add the ring, which should trigger auto-fix
         polygon.add(clockwiseRing);
 
         // The polygon should have been fixed
-        assertTrue(GeoJsonUtils.isCounterClockwise(polygon.getExteriorRing()));
+        assertTrue(PolygonOrientationUtils.isCounterClockwise(polygon.getExteriorRing()));
     }
 
     @Test

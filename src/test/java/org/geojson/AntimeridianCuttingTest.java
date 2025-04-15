@@ -7,8 +7,11 @@ import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
 import java.util.List;
 
+import org.geojson.util.AntimeridianUtils;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 public class AntimeridianCuttingTest {
 
@@ -28,7 +31,7 @@ public class AntimeridianCuttingTest {
         );
         lineString.setConfig(config);
 
-        GeoJsonObject processed = GeoJsonUtils.process(lineString, config);
+        GeoJsonObject processed = GeoJsonProcessor.process(lineString, config);
 
         assertTrue("Should be a MultiLineString after cutting", processed instanceof MultiLineString);
         MultiLineString multiLineString = (MultiLineString) processed;
@@ -52,7 +55,7 @@ public class AntimeridianCuttingTest {
         );
         lineString.setConfig(config);
 
-        GeoJsonObject processed = GeoJsonUtils.process(lineString, config);
+        GeoJsonObject processed = GeoJsonProcessor.process(lineString, config);
 
         assertTrue("Should be a MultiLineString after cutting", processed instanceof MultiLineString);
         MultiLineString multiLineString = (MultiLineString) processed;
@@ -61,7 +64,7 @@ public class AntimeridianCuttingTest {
     }
 
     @Test
-    public void testPolygonCutting() {
+    public void testPolygonCutting() throws JsonProcessingException {
         List<LngLatAlt> ring = Arrays.asList(
                 new LngLatAlt(170, 40),
                 new LngLatAlt(170, 50),
@@ -74,7 +77,7 @@ public class AntimeridianCuttingTest {
         polygon.setConfig(config);
         polygon.add(ring);
 
-        GeoJsonObject processed = GeoJsonUtils.process(polygon, config);
+        GeoJsonObject processed = GeoJsonProcessor.process(polygon, config);
 
         assertTrue("Should be a MultiPolygon after cutting", processed instanceof MultiPolygon);
         MultiPolygon multiPolygon = (MultiPolygon) processed;
@@ -83,7 +86,7 @@ public class AntimeridianCuttingTest {
     }
 
     @Test
-    public void testPolygonCuttingImproved() {
+    public void testPolygonCuttingImproved() throws JsonProcessingException {
         // Create a polygon that crosses the antimeridian
         Polygon polygon = new Polygon();
         polygon.setConfig(config);
@@ -96,7 +99,7 @@ public class AntimeridianCuttingTest {
         ));
 
         // Cut the polygon at the antimeridian
-        GeoJsonObject result = GeoJsonUtils.cutPolygonAtAntimeridian(polygon);
+        GeoJsonObject result = AntimeridianUtils.cutPolygonAtAntimeridian(polygon);
 
         // Verify the result is a MultiPolygon
         assertTrue("Result should be a MultiPolygon", result instanceof MultiPolygon);
@@ -135,7 +138,7 @@ public class AntimeridianCuttingTest {
         feature.setProperty("name", "International Date Line Crossing");
         feature.setProperty("length_km", 222.6);
 
-        GeoJsonObject processed = GeoJsonUtils.process(feature, config);
+        GeoJsonObject processed = GeoJsonProcessor.process(feature, config);
 
         assertTrue("Should still be a Feature", processed instanceof Feature);
         Feature processedFeature = (Feature) processed;
@@ -192,7 +195,7 @@ public class AntimeridianCuttingTest {
         featureCollection.add(polygonFeature);
         featureCollection.add(pointFeature);
 
-        GeoJsonObject processed = GeoJsonUtils.process(featureCollection, config);
+        GeoJsonObject processed = GeoJsonProcessor.process(featureCollection, config);
 
         assertTrue("Should still be a FeatureCollection", processed instanceof FeatureCollection);
         FeatureCollection processedCollection = (FeatureCollection) processed;
@@ -246,7 +249,7 @@ public class AntimeridianCuttingTest {
         );
 
         // Cut the polygon at the antimeridian
-        GeoJsonObject result = GeoJsonUtils.cutPolygonAtAntimeridian(polygon);
+        GeoJsonObject result = AntimeridianUtils.cutPolygonAtAntimeridian(polygon);
 
         // Verify the result is a MultiPolygon
         assertTrue("Result should be a MultiPolygon", result instanceof MultiPolygon);
@@ -303,7 +306,7 @@ public class AntimeridianCuttingTest {
         geometryCollection.add(polygon);
         geometryCollection.add(point);
 
-        GeoJsonObject processed = GeoJsonUtils.process(geometryCollection, config);
+        GeoJsonObject processed = GeoJsonProcessor.process(geometryCollection, config);
 
         assertTrue("Should still be a GeometryCollection", processed instanceof GeometryCollection);
         GeometryCollection processedCollection = (GeometryCollection) processed;
