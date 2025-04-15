@@ -85,12 +85,8 @@ If you need to fix ring orientation programmatically, you can use the `PolygonOr
 
 ```java
 List<LngLatAlt> ring = polygon.getExteriorRing();
-if(!PolygonOrientationUtils.
-
-isCounterClockwise(ring)){
-        PolygonOrientationUtils.
-
-reverseRing(ring);
+if(!PolygonOrientationUtils.isCounterClockwise(ring)){
+        PolygonOrientationUtils.reverseRing(ring);
 }
 ```
 
@@ -104,9 +100,7 @@ GeoJsonConfig config = GeoJsonConfig.rfc7946()
 
 // Apply the configuration to your GeoJSON objects
 Polygon polygon = new Polygon();
-polygon.
-
-setConfig(config);
+polygon.setConfig(config);
 ```
 
 ### Step 4: Handle Antimeridian Crossing
@@ -154,14 +148,13 @@ When using RFC 7946 compliance mode, you'll see warnings if you use the deprecat
 
 ```java
 // Create a configuration with CRS warnings disabled
-GeoJsonConfig config = GeoJsonConfig.rfc7946()
+GeoJsonConfig config = GeoJsonConfig
+                .rfc7946()
                 .setWarnOnCrsUse(false);
 
 // Apply the configuration to your GeoJSON objects
 Point point = new Point(100, 0);
-point.
-
-setConfig(config);
+point.setConfig(config);
 ```
 
 ### Polygon Validation Errors
@@ -187,12 +180,8 @@ GeoJsonObject rfc7946Object = rfc7946Mapper.readValue(inputStream, GeoJsonObject
 
 // You can also apply configurations directly to GeoJSON objects
 Polygon legacyPolygon = new Polygon();
-legacyPolygon.
-
-setConfig(legacyConfig);
+legacyPolygon.setConfig(legacyConfig);
 
 Polygon rfc7946Polygon = new Polygon();
-rfc7946Polygon.
-
-setConfig(rfc7946Config);
+rfc7946Polygon.setConfig(rfc7946Config);
 ```
