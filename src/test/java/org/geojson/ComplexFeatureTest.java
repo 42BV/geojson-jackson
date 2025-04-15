@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.geojson.util.TestResourceLoader;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -212,20 +213,7 @@ public class ComplexFeatureTest {
 
     @Test
     public void testFeatureWithForeignMembers() throws IOException {
-        String json = "{" +
-                "\"type\": \"Feature\"," +
-                "\"geometry\": {" +
-                "  \"type\": \"Point\"," +
-                "  \"coordinates\": [10.0, 20.0]" +
-                "}," +
-                "\"properties\": {" +
-                "  \"name\": \"Test Feature\"" +
-                "}," +
-                "\"customField\": \"This is a custom field\"," +
-                "\"customObject\": {" +
-                "  \"nestedField\": 123" +
-                "}" +
-                "}";
+        String json = TestResourceLoader.loadJson("json/complex/feature_with_foreign_members.json");
 
         Feature feature = mapper.readValue(json, Feature.class);
 
@@ -237,25 +225,7 @@ public class ComplexFeatureTest {
 
     @Test
     public void testFeatureWithBbox() throws IOException {
-        String json = "{" +
-                "\"type\": \"Feature\"," +
-                "\"bbox\": [-10.0, -10.0, 10.0, 10.0]," +
-                "\"geometry\": {" +
-                "  \"type\": \"Polygon\"," +
-                "  \"coordinates\": [" +
-                "    [" +
-                "      [-10.0, -10.0]," +
-                "      [10.0, -10.0]," +
-                "      [10.0, 10.0]," +
-                "      [-10.0, 10.0]," +
-                "      [-10.0, -10.0]" +
-                "    ]" +
-                "  ]" +
-                "}," +
-                "\"properties\": {" +
-                "  \"name\": \"Bounding Box Example\"" +
-                "}" +
-                "}";
+        String json = TestResourceLoader.loadJson("json/complex/feature_with_bbox.json");
 
         Feature feature = mapper.readValue(json, Feature.class);
 

@@ -5,41 +5,40 @@ import static org.junit.Assert.assertEquals;
 import java.util.Arrays;
 import java.util.List;
 
-import tools.jackson.databind.ObjectMapper;
-
 import org.geojson.LngLatAlt;
 import org.geojson.Polygon;
+import org.geojson.util.TestResourceLoader;
 import org.junit.Test;
+
+import tools.jackson.databind.ObjectMapper;
 
 public class PolygonTest {
 
-	private static final ObjectMapper mapper = new ObjectMapper();
+	private final ObjectMapper mapper = new ObjectMapper();
 
 	@Test
-	public void itShouldSerialize() {
+	public void itShouldSerialize() throws Exception {
 		Polygon polygon = new Polygon(MockData.EXTERNAL);
-		assertEquals("{\"type\":\"Polygon\",\"coordinates\":"
-				+ "[[[100.0,0.0],[101.0,0.0],[101.0,1.0],[100.0,1.0],[100.0,0.0]]]}",
-				mapper.writeValueAsString(polygon));
+		String expectedJson = TestResourceLoader.loadJson("json/polygon/polygon.json");
+		assertEquals(expectedJson, mapper.writeValueAsString(polygon));
 	}
 
 	@Test
-	public void itShouldSerializeWithHole() {
+	public void itShouldSerializeWithHole() throws Exception {
 		Polygon polygon = new Polygon(MockData.EXTERNAL);
 		polygon.addInteriorRing(MockData.INTERNAL);
-		assertEquals("{\"type\":\"Polygon\",\"coordinates\":"
-				+ "[[[100.0,0.0],[101.0,0.0],[101.0,1.0],[100.0,1.0],[100.0,0.0]],"
-				+ "[[100.2,0.2],[100.8,0.2],[100.8,0.8],[100.2,0.8],[100.2,0.2]]]}", mapper.writeValueAsString(polygon));
+		String expectedJson = TestResourceLoader.loadJson("json/polygon/polygon_with_hole.json");
+		assertEquals(expectedJson, mapper.writeValueAsString(polygon));
 	}
 
 	@Test(expected = RuntimeException.class)
-	public void itShouldFailOnAddInteriorRingWithoutExteriorRing() {
+	public void itShouldFailOnAddInteriorRingWithoutExteriorRing() throws Exception {
 		Polygon polygon = new Polygon();
 		polygon.addInteriorRing(MockData.EXTERNAL);
 	}
 
 	@Test
-	public void itShouldDeserialize() {
+	public void itShouldDeserialize() throws Exception {
 		Polygon polygon = mapper.readValue("{\"type\":\"Polygon\",\"coordinates\":"
 				+ "[[[100.0,0.0],[101.0,0.0],[101.0,1.0],[100.0,1.0],[100.0,0.0]],"
 				+ "[[100.2,0.2],[100.8,0.2],[100.8,0.8],[100.2,0.8],[100.2,0.2]]]}", Polygon.class);
@@ -49,14 +48,14 @@ public class PolygonTest {
 	}
 
 	@Test
-	public void itShouldSetExteriorRing() {
+	public void itShouldSetExteriorRing() throws Exception {
 		Polygon polygon = new Polygon();
 		polygon.setExteriorRing(MockData.EXTERNAL);
 		assertEquals(MockData.EXTERNAL, polygon.getExteriorRing());
 	}
 
 	@Test
-	public void itShouldReplaceExteriorRing() {
+	public void itShouldReplaceExteriorRing() throws Exception {
 		Polygon polygon = new Polygon(Arrays.asList(
 					new LngLatAlt(0, 0), new LngLatAlt(1, 0), new LngLatAlt(1, 1), new LngLatAlt(0, 1), new LngLatAlt(0, 0)));
 		polygon.setExteriorRing(MockData.EXTERNAL);

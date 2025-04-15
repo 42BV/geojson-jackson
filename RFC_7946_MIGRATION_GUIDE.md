@@ -33,9 +33,7 @@ Use the `GeoJsonMapper` with RFC 7946 mode enabled or configure the global setti
 GeoJsonMapper mapper = new GeoJsonMapper(true);
 
 // Or configure global settings directly
-GeoJsonConfig.
-
-useRfc7946();
+GeoJsonConfig.useRfc7946();
 ```
 
 ### Step 2: Remove Custom CRS Definitions
@@ -51,14 +49,8 @@ Example:
 // Before:
 Point point = new Point(100, 0);
 Crs crs = new Crs();
-crs.
-
-getProperties().
-
-put("name","EPSG:3857");
-point.
-
-setCrs(crs);
+crs.getProperties().put("name","EPSG:3857");
+point.setCrs(crs);
 
 // After:
 // Convert coordinates to WGS 84 first, then:
@@ -86,12 +78,8 @@ If you need to fix ring orientation programmatically, you can use the `GeoJsonUt
 
 ```java
 List<LngLatAlt> ring = polygon.getExteriorRing();
-if(!GeoJsonUtils.
-
-isCounterClockwise(ring)){
-        GeoJsonUtils.
-
-reverseRing(ring);
+if(!GeoJsonUtils.isCounterClockwise(ring)){
+        GeoJsonUtils.reverseRing(ring);
 }
 ```
 
@@ -99,12 +87,8 @@ Alternatively, you can configure the library to automatically fix polygon orient
 
 ```java
 GeoJsonConfig.getInstance()
-    .
-
-setValidatePolygonOrientation(true)
-    .
-
-setAutoFixPolygonOrientation(true);
+.setValidatePolygonOrientation(true)
+.setAutoFixPolygonOrientation(true);
 ```
 
 ### Step 4: Handle Antimeridian Crossing
@@ -113,9 +97,7 @@ For geometries that cross the antimeridian (180° longitude), use the `GeoJsonUt
 
 ```java
 // Enable antimeridian cutting
-GeoJsonConfig.getInstance().
-
-setCutAntimeridian(true);
+GeoJsonConfig.getInstance().setCutAntimeridian(true);
 
 // Process a GeoJSON object using GeoJsonUtils
 GeoJsonObject processed = GeoJsonUtils.process(geoJsonObject);
@@ -155,13 +137,10 @@ GeoJsonMapper rfc7946Mapper = new GeoJsonMapper(true);
 When using RFC 7946 compliance mode, you'll see warnings if you use the deprecated `crs` property. To disable these warnings:
 
 ```java
-GeoJsonConfig.getInstance()
-    .
-
-setRfc7946Compliance(true)
-    .
-
-setWarnOnCrsUse(false);
+GeoJsonConfig
+        .getInstance()
+        .setRfc7946Compliance(true)
+        .setWarnOnCrsUse(false);
 ```
 
 ### Polygon Validation Errors
