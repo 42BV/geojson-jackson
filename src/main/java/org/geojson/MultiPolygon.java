@@ -23,6 +23,6 @@ public class MultiPolygon extends Geometry<List<List<LngLatAlt>>> {
 
 	@Override
 	public String toString() {
-		return "MultiPolygon{} " + super.toString();
+		return buildToString("MultiPolygon");
 	}
 }
