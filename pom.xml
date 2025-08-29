@@ -36,7 +36,7 @@
 
 	<properties>
 		<java-version>8</java-version>
-		<jackson-version>2.19.2</jackson-version>
+		<jackson-version>2.20.0</jackson-version>
 		<junit-version>4.13.2</junit-version>
 		<mockito-version>5.19.0</mockito-version>
 
