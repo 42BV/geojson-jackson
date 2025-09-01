@@ -2,9 +2,8 @@ package org.geojson;
 
 /**
  * Visitor to handle all different types of {@link GeoJsonObject}.
- * 
- * @param <T>
- *            return type of the visitor.
+ *
+ * @param <T> return type of the visitor.
  */
 public interface GeoJsonObjectVisitor<T> {
 

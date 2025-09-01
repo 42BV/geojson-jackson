@@ -18,6 +18,6 @@ public class MultiLineString extends Geometry<List<LngLatAlt>> {
 
 	@Override
 	public String toString() {
-		return "MultiLineString{} " + super.toString();
+		return buildToString("MultiLineString");
 	}
 }
