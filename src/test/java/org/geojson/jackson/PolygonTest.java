@@ -1,35 +1,35 @@
 package org.geojson.jackson;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.geojson.LngLatAlt;
-import org.geojson.Polygon;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import org.geojson.LngLatAlt;
+import org.geojson.Polygon;
+import org.geojson.util.JsonTestUtils;
+import org.geojson.util.TestResourceLoader;
+import org.junit.Test;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class PolygonTest {
 
-	private ObjectMapper mapper = new ObjectMapper();
+	private final ObjectMapper mapper = new ObjectMapper();
 
 	@Test
 	public void itShouldSerialize() throws Exception {
 		Polygon polygon = new Polygon(MockData.EXTERNAL);
-		assertEquals("{\"type\":\"Polygon\",\"coordinates\":"
-				+ "[[[100.0,0.0],[101.0,0.0],[101.0,1.0],[100.0,1.0],[100.0,0.0]]]}",
-				mapper.writeValueAsString(polygon));
+		String expectedJson = TestResourceLoader.loadJson("json/polygon/polygon.json");
+		JsonTestUtils.jsonEquals(expectedJson, mapper.writeValueAsString(polygon));
 	}
 
 	@Test
 	public void itShouldSerializeWithHole() throws Exception {
 		Polygon polygon = new Polygon(MockData.EXTERNAL);
 		polygon.addInteriorRing(MockData.INTERNAL);
-		assertEquals("{\"type\":\"Polygon\",\"coordinates\":"
-				+ "[[[100.0,0.0],[101.0,0.0],[101.0,1.0],[100.0,1.0],[100.0,0.0]],"
-				+ "[[100.2,0.2],[100.8,0.2],[100.8,0.8],[100.2,0.8],[100.2,0.2]]]}", mapper.writeValueAsString(polygon));
+		String expectedJson = TestResourceLoader.loadJson("json/polygon/polygon_with_hole.json");
+		JsonTestUtils.jsonEquals(expectedJson, mapper.writeValueAsString(polygon));
 	}
 
 	@Test(expected = RuntimeException.class)
