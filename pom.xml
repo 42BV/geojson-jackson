@@ -36,7 +36,9 @@
 
 	<properties>
 		<java-version>8</java-version>
-		<jackson-version>2.20.1</jackson-version>
+		<jackson-version>3.0.3</jackson-version>
+		<jackson-annotations-version>2.20</jackson-annotations-version>
+
 		<junit-version>4.13.2</junit-version>
 		<mockito-version>5.20.0</mockito-version>
 
@@ -51,9 +53,19 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
+			<groupId>tools.jackson.core</groupId>
+			<artifactId>jackson-core</artifactId>
+			<version>${jackson-version}</version>
+		</dependency>
+		<dependency>
+			<groupId>tools.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
 			<version>${jackson-version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-annotations</artifactId>
+			<version>${jackson-annotations-version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.mockito</groupId>

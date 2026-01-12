@@ -1,28 +1,29 @@
 package org.geojson.jackson;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
+import java.util.List;
+
+import tools.jackson.databind.ObjectMapper;
+
 import org.geojson.LngLatAlt;
 import org.geojson.MultiPoint;
 import org.junit.Test;
 
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 public class MultiPointTest {
 
-	private ObjectMapper mapper = new ObjectMapper();
+	private static final ObjectMapper mapper = new ObjectMapper();
 
 	@Test
-	public void itShouldSerializeMultiPoint() throws Exception {
+	public void itShouldSerializeMultiPoint() {
 		MultiPoint multiPoint = new MultiPoint(new LngLatAlt(100, 0), new LngLatAlt(101, 1));
 		assertEquals("{\"type\":\"MultiPoint\",\"coordinates\":[[100.0,0.0],[101.0,1.0]]}",
 				mapper.writeValueAsString(multiPoint));
 	}
 
 	@Test
-	public void itShouldDeserializeMultiPoint() throws Exception {
+	public void itShouldDeserializeMultiPoint() {
 		MultiPoint multiPoint = mapper
 				.readValue("{\"type\":\"MultiPoint\",\"coordinates\":[[100.0,0.0],[101.0,1.0]]}",
 				MultiPoint.class);

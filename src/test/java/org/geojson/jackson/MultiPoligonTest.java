@@ -1,19 +1,20 @@
 package org.geojson.jackson;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.junit.Assert.assertEquals;
+
+import tools.jackson.databind.ObjectMapper;
+
 import org.geojson.LngLatAlt;
 import org.geojson.MultiPolygon;
 import org.geojson.Polygon;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-
 public class MultiPoligonTest {
 
-	private ObjectMapper mapper = new ObjectMapper();
+	private static final ObjectMapper mapper = new ObjectMapper();
 
 	@Test
-	public void itShouldSerialize() throws Exception {
+	public void itShouldSerialize() {
 		MultiPolygon multiPolygon = new MultiPolygon();
 		multiPolygon.add(new Polygon(new LngLatAlt(102, 2), new LngLatAlt(103, 2), new LngLatAlt(103, 3),
 				new LngLatAlt(102, 3), new LngLatAlt(102, 2)));
@@ -28,7 +29,7 @@ public class MultiPoligonTest {
 	}
 
 	@Test
-	public void itShouldDeserialize() throws Exception {
+	public void itShouldDeserialize() {
 		MultiPolygon multiPolygon = mapper.readValue(
 				"{\"type\":\"MultiPolygon\",\"coordinates\":[[[[102.0,2.0],[103.0,2.0],[103.0,3.0],[102.0,3.0],[102.0,2.0]]],"
 						+ "[[[100.0,0.0],[101.0,0.0],[101.0,1.0],[100.0,1.0],[100.0,0.0]],"

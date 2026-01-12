@@ -1,20 +1,21 @@
 package org.geojson.jackson;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
+import tools.jackson.databind.ObjectMapper;
+
 import org.geojson.Crs;
 import org.geojson.GeoJsonObject;
 import org.geojson.Point;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 public class CrsTest {
 
-	private ObjectMapper mapper = new ObjectMapper();
+	private static final ObjectMapper mapper = new ObjectMapper();
 
 	@Test
-	public void itShouldParseCrsWithLink() throws Exception {
+	public void itShouldParseCrsWithLink() {
 		GeoJsonObject value = mapper.readValue("{\"crs\": { \"type\": \"link\", \"properties\": "
 				+ "{ \"href\": \"http://example.com/crs/42\", \"type\": \"proj4\" }},"
 				+ "\"type\":\"Point\",\"coordinates\":[100.0,5.0]}", GeoJsonObject.class);
@@ -23,12 +24,12 @@ public class CrsTest {
 	}
 
 	@Test
-	public void itShouldSerializeCrsWithLink() throws Exception {
+	public void itShouldSerializeCrsWithLink() {
 		Point point = new Point();
 		Crs crs = new Crs();
 		crs.setType(CrsType.link);
 		point.setCrs(crs);
 		String value = mapper.writeValueAsString(point);
-		assertEquals("{\"type\":\"Point\",\"crs\":{\"type\":\"link\",\"properties\":{}}}", value);
+		assertEquals("{\"type\":\"Point\",\"crs\":{\"properties\":{},\"type\":\"link\"}}", value);
 	}
 }

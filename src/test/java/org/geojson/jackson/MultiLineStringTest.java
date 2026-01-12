@@ -1,20 +1,21 @@
 package org.geojson.jackson;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.junit.Assert.assertEquals;
+
+import java.util.Arrays;
+
+import tools.jackson.databind.ObjectMapper;
+
 import org.geojson.LngLatAlt;
 import org.geojson.MultiLineString;
 import org.junit.Test;
 
-import java.util.Arrays;
-
-import static org.junit.Assert.assertEquals;
-
 public class MultiLineStringTest {
 
-	private ObjectMapper mapper = new ObjectMapper();
+	private static final ObjectMapper mapper = new ObjectMapper();
 
 	@Test
-	public void itShouldSerialize() throws Exception {
+	public void itShouldSerialize() {
 		MultiLineString multiLineString = new MultiLineString();
 		multiLineString.add(Arrays.asList(new LngLatAlt(100, 0), new LngLatAlt(101, 1)));
 		multiLineString.add(Arrays.asList(new LngLatAlt(102, 2), new LngLatAlt(103, 3)));

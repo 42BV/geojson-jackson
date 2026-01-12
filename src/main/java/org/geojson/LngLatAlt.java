@@ -1,12 +1,13 @@
 package org.geojson;
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import org.geojson.jackson.LngLatAltDeserializer;
-import org.geojson.jackson.LngLatAltSerializer;
-
 import java.io.Serializable;
 import java.util.Arrays;
+
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonSerialize;
+
+import org.geojson.jackson.LngLatAltDeserializer;
+import org.geojson.jackson.LngLatAltSerializer;
 
 @JsonDeserialize(using = LngLatAltDeserializer.class)
 @JsonSerialize(using = LngLatAltSerializer.class)
@@ -34,7 +35,8 @@ public class LngLatAlt implements Serializable{
 	/**
 	 * Construct a LngLatAlt with additional elements.
 	 * The specification allows for any number of additional elements in a position, after lng, lat, alt.
-	 * http://geojson.org/geojson-spec.html#positions
+	 * <a href="http://geojson.org/geojson-spec.html#positions">See positions...</a>
+	 *
 	 * @param longitude The longitude.
 	 * @param latitude The latitude.
 	 * @param altitude The altitude.
@@ -121,39 +123,35 @@ public class LngLatAlt implements Serializable{
 
 	@Override
 	public int hashCode() {
-		long temp = Double.doubleToLongBits(longitude);
-		int result = (int)(temp ^ (temp >>> 32));
-		temp = Double.doubleToLongBits(latitude);
-		result = 31 * result + (int)(temp ^ (temp >>> 32));
-		temp = Double.doubleToLongBits(altitude);
-		result = 31 * result + (int)(temp ^ (temp >>> 32));
+		int result = Double.hashCode(longitude);
+		result = 31 * result + Double.hashCode(latitude);
+		result = 31 * result + Double.hashCode(altitude);
 		for(double element : additionalElements) {
-			temp = Double.doubleToLongBits(element);
-			result = 31 * result + (int) (temp ^ (temp >>> 32));
+			result = 31 * result + Double.hashCode(element);
 		}
 		return result;
 	}
 
 	@Override
 	public String toString() {
-		String s =  "LngLatAlt{" + "longitude=" + longitude + ", latitude=" + latitude + ", altitude=" + altitude;
+		StringBuilder s = new StringBuilder("LngLatAlt{" + "longitude=" + longitude + ", latitude=" + latitude + ", altitude=" + altitude);
 
 		if (hasAdditionalElements()) {
-			s += ", additionalElements=[";
+			s.append(", additionalElements=[");
 
 			String suffix = "";
 			for (Double element : additionalElements) {
 				if (element != null) {
-					s += suffix + element;
+					s.append(suffix).append(element);
 					suffix = ", ";
 				}
 			}
-			s += ']';
+			s.append(']');
 		}
 
-		s += '}';
+		s.append('}');
 
-		return s;
+		return s.toString();
 	}
 
 	private void checkAltitudeAndAdditionalElements() {

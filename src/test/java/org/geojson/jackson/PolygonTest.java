@@ -1,22 +1,22 @@
 package org.geojson.jackson;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.junit.Assert.assertEquals;
+
+import java.util.Arrays;
+import java.util.List;
+
+import tools.jackson.databind.ObjectMapper;
+
 import org.geojson.LngLatAlt;
 import org.geojson.Polygon;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-
 public class PolygonTest {
 
-	private ObjectMapper mapper = new ObjectMapper();
+	private static final ObjectMapper mapper = new ObjectMapper();
 
 	@Test
-	public void itShouldSerialize() throws Exception {
+	public void itShouldSerialize() {
 		Polygon polygon = new Polygon(MockData.EXTERNAL);
 		assertEquals("{\"type\":\"Polygon\",\"coordinates\":"
 				+ "[[[100.0,0.0],[101.0,0.0],[101.0,1.0],[100.0,1.0],[100.0,0.0]]]}",
@@ -24,7 +24,7 @@ public class PolygonTest {
 	}
 
 	@Test
-	public void itShouldSerializeWithHole() throws Exception {
+	public void itShouldSerializeWithHole() {
 		Polygon polygon = new Polygon(MockData.EXTERNAL);
 		polygon.addInteriorRing(MockData.INTERNAL);
 		assertEquals("{\"type\":\"Polygon\",\"coordinates\":"
@@ -33,13 +33,13 @@ public class PolygonTest {
 	}
 
 	@Test(expected = RuntimeException.class)
-	public void itShouldFailOnAddInteriorRingWithoutExteriorRing() throws Exception {
+	public void itShouldFailOnAddInteriorRingWithoutExteriorRing() {
 		Polygon polygon = new Polygon();
 		polygon.addInteriorRing(MockData.EXTERNAL);
 	}
 
 	@Test
-	public void itShouldDeserialize() throws Exception {
+	public void itShouldDeserialize() {
 		Polygon polygon = mapper.readValue("{\"type\":\"Polygon\",\"coordinates\":"
 				+ "[[[100.0,0.0],[101.0,0.0],[101.0,1.0],[100.0,1.0],[100.0,0.0]],"
 				+ "[[100.2,0.2],[100.8,0.2],[100.8,0.8],[100.2,0.8],[100.2,0.2]]]}", Polygon.class);
@@ -49,14 +49,14 @@ public class PolygonTest {
 	}
 
 	@Test
-	public void itShouldSetExteriorRing() throws Exception {
+	public void itShouldSetExteriorRing() {
 		Polygon polygon = new Polygon();
 		polygon.setExteriorRing(MockData.EXTERNAL);
 		assertEquals(MockData.EXTERNAL, polygon.getExteriorRing());
 	}
 
 	@Test
-	public void itShouldReplaceExteriorRing() throws Exception {
+	public void itShouldReplaceExteriorRing() {
 		Polygon polygon = new Polygon(Arrays.asList(
 					new LngLatAlt(0, 0), new LngLatAlt(1, 0), new LngLatAlt(1, 1), new LngLatAlt(0, 1), new LngLatAlt(0, 0)));
 		polygon.setExteriorRing(MockData.EXTERNAL);
