@@ -36,7 +36,7 @@
 
 	<properties>
 		<java-version>17</java-version>
-		<jackson-version>3.0.3</jackson-version>
+		<jackson-version>3.0.4</jackson-version>
 		<jackson-annotations-version>2.20</jackson-annotations-version>
 
 		<junit-version>4.13.2</junit-version>
