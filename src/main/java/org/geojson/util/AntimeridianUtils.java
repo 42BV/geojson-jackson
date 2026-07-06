@@ -66,40 +66,61 @@ public class AntimeridianUtils {
      * @return The interpolated latitude
      */
     public static double interpolateLatitude(LngLatAlt p1, LngLatAlt p2) {
+        double fraction = crossingFraction(p1, p2);
+        return p1.getLatitude() + fraction * (p2.getLatitude() - p1.getLatitude());
+    }
+
+    /**
+     * Calculates the fraction along the segment from p1 to p2 (crossing the antimeridian)
+     * at which the antimeridian is reached.
+     *
+     * @param p1 The first point
+     * @param p2 The second point
+     * @return The fraction in the range [0, 1]
+     */
+    private static double crossingFraction(LngLatAlt p1, LngLatAlt p2) {
         double lon1 = normalizeLongitude(p1.getLongitude());
-        double lat1 = p1.getLatitude();
         double lon2 = normalizeLongitude(p2.getLongitude());
-        double lat2 = p2.getLatitude();
 
-        // Special case for the test case with -170 to 170 crossing
-        if ((lon1 == -170 && lon2 == 170) || (lon1 == 170 && lon2 == -170)) {
-            return (lat1 + lat2) / 2.0; // Return the midpoint of latitudes
-        }
-
-        double antimeridianLon = getAntimeridianLon(lon1, lon2);
-
-        // Calculate the fraction of the distance to the antimeridian
-        // Normalize longitudes for calculation to avoid issues with the antimeridian
-        if (lon1 > 0 && lon2 < 0) {
-            // When crossing from positive to negative, adjust lon2
+        // Unwrap the second longitude so the segment is continuous in longitude
+        // and passes through the antimeridian within the [lon1, lon2] interval.
+        double crossingLon;
+        if (lon1 > lon2) {
+            // Eastward crossing (positive to negative side): shift lon2 up past 180
             lon2 += 360;
-        } else if (lon1 < 0 && lon2 > 0) {
-            // When crossing from negative to positive, adjust lon1
-            lon1 += 360;
-        }
-
-        // Calculate the fraction
-        double fraction;
-        if (lon1 != lon2) { // Avoid division by zero
-            fraction = Math.abs((antimeridianLon - lon1) / (lon2 - lon1));
-            // Ensure fraction is between 0 and 1
-            fraction = Math.max(0, Math.min(1, fraction));
+            crossingLon = ANTIMERIDIAN;
         } else {
-            fraction = 0.5; // If points have the same longitude, use midpoint
+            // Westward crossing (negative to positive side): shift lon2 down past -180
+            lon2 -= 360;
+            crossingLon = -ANTIMERIDIAN;
         }
 
-        // Interpolate the latitude
-        return lat1 + fraction * (lat2 - lat1);
+        if (lon1 == lon2) {
+            return 0.5; // Degenerate segment (e.g. 180 to -180), use midpoint
+        }
+
+        double fraction = (crossingLon - lon1) / (lon2 - lon1);
+        return Math.max(0, Math.min(1, fraction));
+    }
+
+    /**
+     * Creates the intersection point of a segment with the antimeridian, at the given
+     * longitude (180 for the east side, -180 for the west side). Latitude (and altitude,
+     * when both points have one) is interpolated linearly along the segment.
+     *
+     * @param p1        The first point of the segment
+     * @param p2        The second point of the segment
+     * @param longitude The longitude to place the intersection point at (180 or -180)
+     * @return The intersection point
+     */
+    private static LngLatAlt intersectionPoint(LngLatAlt p1, LngLatAlt p2, double longitude) {
+        double fraction = crossingFraction(p1, p2);
+        double latitude = p1.getLatitude() + fraction * (p2.getLatitude() - p1.getLatitude());
+        if (p1.hasAltitude() && p2.hasAltitude()) {
+            double altitude = p1.getAltitude() + fraction * (p2.getAltitude() - p1.getAltitude());
+            return new LngLatAlt(longitude, latitude, altitude);
+        }
+        return new LngLatAlt(longitude, latitude);
     }
 
     /**
@@ -137,12 +158,32 @@ public class AntimeridianUtils {
      * @return A MultiLineString if the LineString crosses the antimeridian, otherwise the original LineString
      */
     public static GeoJsonObject cutLineStringAtAntimeridian(LineString lineString) {
-        List<LngLatAlt> coordinates = lineString.getCoordinates();
-        if (coordinates.size() < 2) {
+        List<List<LngLatAlt>> segments = cutLineAtAntimeridian(lineString.getCoordinates());
+
+        if (segments.size() <= 1) {
             return lineString;
         }
+        MultiLineString multiLineString = new MultiLineString();
+        for (List<LngLatAlt> segment : segments) {
+            multiLineString.add(segment);
+        }
+        return multiLineString;
+    }
 
+    /**
+     * Cuts a line (a list of points) at the antimeridian.
+     *
+     * @param coordinates The points of the line
+     * @return The segments of the line after cutting; a single segment if the line does not
+     * cross the antimeridian
+     */
+    public static List<List<LngLatAlt>> cutLineAtAntimeridian(List<LngLatAlt> coordinates) {
         List<List<LngLatAlt>> segments = new ArrayList<>();
+        if (coordinates.size() < 2) {
+            segments.add(coordinates);
+            return segments;
+        }
+
         List<LngLatAlt> currentSegment = new ArrayList<>();
         currentSegment.add(coordinates.get(0));
 
@@ -151,34 +192,21 @@ public class AntimeridianUtils {
             LngLatAlt p2 = coordinates.get(i);
 
             if (crossesAntimeridian(p1, p2)) {
-                // Calculate intersection points with the antimeridian
-                double lat = interpolateLatitude(p1, p2);
-
-                // Add the intersection point to the current segment
-                LngLatAlt intersection1 = new LngLatAlt(Math.signum(p1.getLongitude()) * ANTIMERIDIAN, lat);
-                currentSegment.add(intersection1);
-                segments.add(new ArrayList<>(currentSegment));
+                // End the current segment at the antimeridian, on the side p1 is on
+                double side = normalizeLongitude(p1.getLongitude()) >= 0 ? ANTIMERIDIAN : -ANTIMERIDIAN;
+                currentSegment.add(intersectionPoint(p1, p2, side));
+                segments.add(currentSegment);
 
                 // Start a new segment from the other side of the antimeridian
                 currentSegment = new ArrayList<>();
-                LngLatAlt intersection2 = new LngLatAlt(-Math.signum(p1.getLongitude()) * ANTIMERIDIAN, lat);
-                currentSegment.add(intersection2);
+                currentSegment.add(intersectionPoint(p1, p2, -side));
             }
 
             currentSegment.add(p2);
         }
 
         segments.add(currentSegment);
-
-        if (segments.size() == 1) {
-            return lineString;
-        } else {
-            MultiLineString multiLineString = new MultiLineString();
-            for (List<LngLatAlt> segment : segments) {
-                multiLineString.add(segment);
-            }
-            return multiLineString;
-        }
+        return segments;
     }
 
     /**
@@ -282,6 +310,9 @@ public class AntimeridianUtils {
 
     /**
      * Cuts a ring at the antimeridian and returns two rings, one for each side.
+     * <p>
+     * Note: rings that cross the antimeridian more than twice (multiple lobes on either side)
+     * are merged into a single ring per side, which can produce a self-intersecting ring.
      *
      * @param ring The ring to cut
      * @return A list containing either one ring (if no cut was needed) or two rings (east and west sides)
@@ -325,12 +356,9 @@ public class AntimeridianUtils {
 
             // Check if this segment crosses the antimeridian
             if (crossesAntimeridian(p1, p2)) {
-                // Calculate the latitude at the crossing point
-                double lat = interpolateLatitude(p1, p2);
-
                 // Add intersection points to both rings
-                eastRing.add(new LngLatAlt(ANTIMERIDIAN, lat));
-                westRing.add(new LngLatAlt(-ANTIMERIDIAN, lat));
+                eastRing.add(intersectionPoint(p1, p2, ANTIMERIDIAN));
+                westRing.add(intersectionPoint(p1, p2, -ANTIMERIDIAN));
             }
         }
 

@@ -92,6 +92,22 @@ public class AntimeridianUtilsTest {
     }
 
     @Test
+    public void testInterpolateLatitudeAsymmetricCrossing() {
+        // Crossing from -170 to 160 (westward): the antimeridian is 10 of the 30 degrees
+        // along the segment, so the latitude should be one third of the way
+        LngLatAlt p1 = new LngLatAlt(-170, 0);
+        LngLatAlt p2 = new LngLatAlt(160, 30);
+        double lat = AntimeridianUtils.interpolateLatitude(p1, p2);
+        assertEquals("Latitude should be a third of the way for a 10/30 crossing", 10.0, lat, 0.001);
+
+        // Crossing from 175 to -165 (eastward): the antimeridian is 5 of the 20 degrees
+        p1 = new LngLatAlt(175, 0);
+        p2 = new LngLatAlt(-165, 40);
+        lat = AntimeridianUtils.interpolateLatitude(p1, p2);
+        assertEquals("Latitude should be a quarter of the way for a 5/20 crossing", 10.0, lat, 0.001);
+    }
+
+    @Test
     public void testGetAntimeridianLon() {
         // Test crossing from positive to negative
         double lon1 = 170;
@@ -148,6 +164,46 @@ public class AntimeridianUtilsTest {
         GeoJsonObject noAntimeridianResult = AntimeridianUtils.cutLineStringAtAntimeridian(noAntimeridianCrossing);
         assertTrue(noAntimeridianResult instanceof LineString);
         assertEquals(noAntimeridianCrossing, noAntimeridianResult);
+    }
+
+    @Test
+    public void testCutLineStringWithUnnormalizedLongitudes() {
+        // 190 is equivalent to -170 (west side); the first segment must end at -180, not 180
+        LineString lineString = new LineString();
+        lineString.add(new LngLatAlt(190, 0));
+        lineString.add(new LngLatAlt(170, 10));
+
+        GeoJsonObject result = AntimeridianUtils.cutLineStringAtAntimeridian(lineString);
+
+        assertTrue(result instanceof MultiLineString);
+        MultiLineString multiLineString = (MultiLineString) result;
+        assertEquals(2, multiLineString.getCoordinates().size());
+
+        List<LngLatAlt> firstSegment = multiLineString.getCoordinates().get(0);
+        assertEquals("First segment should end on the west side of the antimeridian",
+                -180.0, firstSegment.get(firstSegment.size() - 1).getLongitude(), 0.0001);
+
+        List<LngLatAlt> secondSegment = multiLineString.getCoordinates().get(1);
+        assertEquals("Second segment should start on the east side of the antimeridian",
+                180.0, secondSegment.get(0).getLongitude(), 0.0001);
+    }
+
+    @Test
+    public void testCutLineStringInterpolatesAltitude() {
+        LineString lineString = new LineString();
+        lineString.add(new LngLatAlt(170, 0, 100));
+        lineString.add(new LngLatAlt(-170, 10, 200));
+
+        GeoJsonObject result = AntimeridianUtils.cutLineStringAtAntimeridian(lineString);
+
+        assertTrue(result instanceof MultiLineString);
+        MultiLineString multiLineString = (MultiLineString) result;
+        List<LngLatAlt> firstSegment = multiLineString.getCoordinates().get(0);
+        LngLatAlt intersection = firstSegment.get(firstSegment.size() - 1);
+
+        assertTrue("Intersection point should have an altitude when both endpoints do",
+                intersection.hasAltitude());
+        assertEquals("Altitude should be interpolated at the crossing", 150.0, intersection.getAltitude(), 0.001);
     }
 
     @Test

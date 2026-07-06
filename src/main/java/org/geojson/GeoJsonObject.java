@@ -82,9 +82,6 @@ public abstract class GeoJsonObject implements Serializable {
      */
     @Deprecated
     public Crs getCrs() {
-        if (crs != null && getConfig().isWarnOnCrsUse()) {
-            System.err.println("Warning: The 'crs' member is deprecated in RFC 7946. All GeoJSON coordinates should use WGS 84.");
-        }
         return crs;
     }
 

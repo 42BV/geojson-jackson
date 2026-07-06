@@ -235,6 +235,88 @@ public class GeoJsonProcessorTest {
     }
 
     @Test
+    public void testProcessMultiPolygon() {
+        // A MultiPolygon with one polygon crossing the antimeridian and one that doesn't
+        MultiPolygon multiPolygon = new MultiPolygon();
+
+        Polygon crossingPolygon = new Polygon(Arrays.asList(
+                new LngLatAlt(170, 0),
+                new LngLatAlt(170, 10),
+                new LngLatAlt(-170, 10),
+                new LngLatAlt(-170, 0),
+                new LngLatAlt(170, 0)));
+        multiPolygon.add(crossingPolygon);
+
+        Polygon simplePolygon = new Polygon(Arrays.asList(
+                new LngLatAlt(0, 0),
+                new LngLatAlt(10, 0),
+                new LngLatAlt(10, 10),
+                new LngLatAlt(0, 10),
+                new LngLatAlt(0, 0)));
+        multiPolygon.add(simplePolygon);
+
+        GeoJsonObject processed = GeoJsonProcessor.process(multiPolygon, config);
+
+        assertTrue(processed instanceof MultiPolygon);
+        MultiPolygon processedMultiPolygon = (MultiPolygon) processed;
+
+        // The crossing polygon is cut in two, so the result has three polygons
+        assertEquals(3, processedMultiPolygon.getCoordinates().size());
+
+        // All exterior rings should be counterclockwise
+        for (List<List<LngLatAlt>> rings : processedMultiPolygon.getCoordinates()) {
+            assertTrue(PolygonOrientationUtils.isCounterClockwise(rings.get(0)));
+        }
+    }
+
+    @Test
+    public void testProcessMultiLineString() {
+        // A MultiLineString with one line crossing the antimeridian and one that doesn't
+        MultiLineString multiLineString = new MultiLineString();
+        multiLineString.add(Arrays.asList(
+                new LngLatAlt(170, 0),
+                new LngLatAlt(-170, 10)));
+        multiLineString.add(Arrays.asList(
+                new LngLatAlt(0, 0),
+                new LngLatAlt(10, 10)));
+
+        GeoJsonObject processed = GeoJsonProcessor.process(multiLineString, config);
+
+        assertTrue(processed instanceof MultiLineString);
+        MultiLineString processedMultiLineString = (MultiLineString) processed;
+
+        // The crossing line is cut in two, so the result has three lines
+        assertEquals(3, processedMultiLineString.getCoordinates().size());
+    }
+
+    @Test
+    public void testProcessPolygonCutPartsHaveValidOrientation() {
+        // A clockwise (wrongly oriented) polygon crossing the antimeridian: after
+        // processing, both parts should be closed and counterclockwise
+        Polygon polygon = new Polygon(Arrays.asList(
+                new LngLatAlt(170, 0),
+                new LngLatAlt(-170, 0),
+                new LngLatAlt(-170, 10),
+                new LngLatAlt(170, 10),
+                new LngLatAlt(170, 0)));
+
+        GeoJsonObject processed = GeoJsonProcessor.processPolygon(polygon, config);
+
+        assertTrue(processed instanceof MultiPolygon);
+        MultiPolygon multiPolygon = (MultiPolygon) processed;
+        assertEquals(2, multiPolygon.getCoordinates().size());
+
+        for (List<List<LngLatAlt>> rings : multiPolygon.getCoordinates()) {
+            List<LngLatAlt> exteriorRing = rings.get(0);
+            LngLatAlt first = exteriorRing.get(0);
+            LngLatAlt last = exteriorRing.get(exteriorRing.size() - 1);
+            assertEquals(first.getLongitude(), last.getLongitude(), 0.0001);
+            assertEquals(first.getLatitude(), last.getLatitude(), 0.0001);
+            assertTrue(PolygonOrientationUtils.isCounterClockwise(exteriorRing));
+        }
+    }
+
+    @Test
     public void testProcess() {
         // Test with different types of GeoJSON objects
 

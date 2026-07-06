@@ -13,10 +13,11 @@ public class GeoJsonConfig {
     private boolean validatePolygonOrientation = false;
 
     /**
-     * Whether to warn when CRS is used in RFC 7946 mode.
+     * Whether to warn when a CRS is set in RFC 7946 mode.
      * RFC 7946 removed support for custom coordinate reference systems.
+     * Disabled by default in legacy mode, enabled in RFC 7946 mode.
      */
-    private boolean warnOnCrsUse = true;
+    private boolean warnOnCrsUse = false;
 
     /**
      * Whether to automatically cut geometries that cross the antimeridian.
@@ -44,9 +45,10 @@ public class GeoJsonConfig {
      */
     public GeoJsonConfig(boolean rfc7946Compliance) {
         if (rfc7946Compliance) {
-            this.setValidatePolygonOrientation(true);
+            this.validatePolygonOrientation = true;
             this.autoFixPolygonOrientation = true;
             this.cutAntimeridian = true;
+            this.warnOnCrsUse = true;
         }
     }
 

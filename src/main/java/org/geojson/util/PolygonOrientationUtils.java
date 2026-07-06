@@ -1,6 +1,7 @@
 package org.geojson.util;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.geojson.LngLatAlt;
@@ -35,13 +36,13 @@ public class PolygonOrientationUtils {
             sum += (p2.getLongitude() - p1.getLongitude()) * (p2.getLatitude() + p1.getLatitude());
         }
 
-        // If the signed area is negative, the ring is counterclockwise
-        // Note: This is the opposite of the usual convention because GeoJSON uses longitude-latitude order
+        // The trapezoid formula sums (x2 - x1) * (y2 + y1): negative means counterclockwise
         return sum < 0;
     }
 
     /**
-     * Reverses the orientation of a ring.
+     * Reverses the orientation of a ring in place.
+     * A closed ring stays closed: reversing [A, B, C, D, A] gives [A, D, C, B, A].
      *
      * @param ring The ring to reverse
      */
@@ -49,19 +50,7 @@ public class PolygonOrientationUtils {
         if (ring == null || ring.size() <= 1) {
             return;
         }
-
-        // Keep the last point (which should be the same as the first)
-        LngLatAlt last = ring.get(ring.size() - 1);
-
-        // Reverse the list excluding the last point
-        for (int i = 0, j = ring.size() - 2; i < j; i++, j--) {
-            LngLatAlt temp = ring.get(i);
-            ring.set(i, ring.get(j));
-            ring.set(j, temp);
-        }
-
-        // Ensure the last point is still the same as the first
-        ring.set(ring.size() - 1, last);
+        Collections.reverse(ring);
     }
 
     /**
@@ -86,67 +75,33 @@ public class PolygonOrientationUtils {
 
     /**
      * Validates that the exterior ring is counterclockwise and interior rings are clockwise.
-     * This method also ensures rings are closed before validating.
+     * Rings must be closed (first and last points the same); unclosed rings are rejected.
+     * This method never modifies the rings.
      *
      * @param rings The list of rings to validate
-     * @throws IllegalArgumentException if the rings do not follow the right-hand rule or have fewer than 4 points
+     * @throws IllegalArgumentException if a ring is not closed, has fewer than 4 points,
+     *                                  or does not follow the right-hand rule
      */
     public static void validatePolygonOrientation(List<List<LngLatAlt>> rings) {
         if (rings == null || rings.isEmpty()) {
             return;
         }
 
-        // Create a mutable copy of the rings list if needed
-        List<List<LngLatAlt>> mutableRings = rings;
-        boolean isImmutable = false;
-
-        try {
-            // Try to set the first element to itself to check if the list is mutable
-            mutableRings.set(0, rings.get(0));
-        } catch (UnsupportedOperationException e) {
-            // If the list is immutable, create a new mutable list
-            mutableRings = new ArrayList<>(rings);
-            isImmutable = true;
-        }
-
-        // Exterior ring should be counterclockwise
-        List<LngLatAlt> exteriorRing = mutableRings.get(0);
-
-        // Validate that the ring has at least 3 unique points (4 including closure)
-        if (exteriorRing.size() < 4) {
-            throw new IllegalArgumentException("Exterior ring must have at least 4 points (3 unique points + closure)");
-        }
-
-        // First ensure the ring is closed and update the reference if needed
-        exteriorRing = ensureRingClosed(exteriorRing);
-        mutableRings.set(0, exteriorRing);
-
-        // Then validate orientation
+        // Exterior ring should be closed and counterclockwise
+        List<LngLatAlt> exteriorRing = rings.get(0);
+        validateRingClosed(exteriorRing, "Exterior ring");
         if (!isCounterClockwise(exteriorRing)) {
             throw new IllegalArgumentException("Exterior ring must be counterclockwise according to RFC 7946");
         }
 
-        // Interior rings should be clockwise
-        for (int i = 1; i < mutableRings.size(); i++) {
-            List<LngLatAlt> interiorRing = mutableRings.get(i);
-
-            // Validate that the ring has at least 3 unique points (4 including closure)
-            if (interiorRing.size() < 4) {
-                throw new IllegalArgumentException("Interior ring " + i + " must have at least 4 points (3 unique points + closure)");
-            }
-
-            // First ensure the ring is closed and update the reference if needed
-            interiorRing = ensureRingClosed(interiorRing);
-            mutableRings.set(i, interiorRing);
-
-            // Then validate orientation
+        // Interior rings should be closed and clockwise
+        for (int i = 1; i < rings.size(); i++) {
+            List<LngLatAlt> interiorRing = rings.get(i);
+            validateRingClosed(interiorRing, "Interior ring " + i);
             if (isCounterClockwise(interiorRing)) {
                 throw new IllegalArgumentException("Interior ring " + i + " must be clockwise according to RFC 7946");
             }
         }
-
-        // If the original list was immutable, we don't need to update it
-        // The validation has been performed on the mutable copy
     }
 
     /**

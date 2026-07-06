@@ -86,13 +86,14 @@ public class PolygonOrientationUtilsTest {
         // Verify it's now clockwise
         assertFalse(PolygonOrientationUtils.isCounterClockwise(ring));
 
-        // After reversal, the ring should still be closed
-        // The first point is now the original second-to-last point (0, 1)
-        // The last point should still be (0, 0) to maintain closure
-        assertEquals(0.0, ring.get(0).getLongitude(), 0.0);
-        assertEquals(1.0, ring.get(0).getLatitude(), 0.0);
-        assertEquals(0.0, ring.get(ring.size() - 1).getLongitude(), 0.0);
-        assertEquals(0.0, ring.get(ring.size() - 1).getLatitude(), 0.0);
+        // After reversal, the ring must still be closed: [A, B, C, D, A] becomes [A, D, C, B, A]
+        assertEquals(5, ring.size());
+        assertEquals(ring.get(0).getLongitude(), ring.get(ring.size() - 1).getLongitude(), 0.0);
+        assertEquals(ring.get(0).getLatitude(), ring.get(ring.size() - 1).getLatitude(), 0.0);
+
+        // The second point is now the original second-to-last point (0, 1)
+        assertEquals(0.0, ring.get(1).getLongitude(), 0.0);
+        assertEquals(1.0, ring.get(1).getLatitude(), 0.0);
     }
 
     @Test

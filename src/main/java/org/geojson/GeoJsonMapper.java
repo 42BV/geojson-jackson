@@ -34,11 +34,13 @@ public class GeoJsonMapper extends ObjectMapper {
 
     /**
      * Creates a new GeoJsonMapper with RFC 7946 compliance enabled or disabled.
+     * Equivalent to {@code new GeoJsonMapper(GeoJsonConfig.rfc7946())} when enabled,
+     * or {@code new GeoJsonMapper(GeoJsonConfig.legacy())} when disabled.
      *
      * @param rfc7946Compliance Whether to enable RFC 7946 compliance
      */
     public GeoJsonMapper(boolean rfc7946Compliance) {
-        this(rfc7946Compliance, false);
+        this(new GeoJsonConfig(rfc7946Compliance));
     }
 
     /**
@@ -48,12 +50,7 @@ public class GeoJsonMapper extends ObjectMapper {
      * @param validatePolygonOrientation Whether to validate polygon orientation
      */
     public GeoJsonMapper(boolean rfc7946Compliance, boolean validatePolygonOrientation) {
-        super();
-        if (rfc7946Compliance) {
-            this.config = GeoJsonConfig.rfc7946().setValidatePolygonOrientation(validatePolygonOrientation);
-            return;
-        }
-        this.config = GeoJsonConfig.legacy();
+        this(new GeoJsonConfig(rfc7946Compliance).setValidatePolygonOrientation(validatePolygonOrientation));
     }
 
     /**

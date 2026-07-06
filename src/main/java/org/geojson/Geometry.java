@@ -42,7 +42,7 @@ public abstract class Geometry<T> extends GeoJsonObject {
 			return false;
 		}
 		Geometry geometry = (Geometry)o;
-		return !(!Objects.equals(coordinates, geometry.coordinates));
+		return Objects.equals(coordinates, geometry.coordinates);
 	}
 
 	@Override

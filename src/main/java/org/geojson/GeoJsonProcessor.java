@@ -36,15 +36,43 @@ public class GeoJsonProcessor {
     public static GeoJsonObject processPolygon(Polygon polygon, GeoJsonConfig config) {
         // Fix polygon orientation if needed
         if (config.isAutoFixPolygonOrientation()) {
-            PolygonOrientationUtils.fixPolygonOrientation(polygon.getCoordinates());
+            polygon.setCoordinates(PolygonOrientationUtils.fixPolygonOrientation(polygon.getCoordinates()));
         }
 
         // Cut at antimeridian if needed
         if (config.isCutAntimeridian()) {
-            return AntimeridianUtils.cutPolygonAtAntimeridian(polygon);
+            GeoJsonObject cut = AntimeridianUtils.cutPolygonAtAntimeridian(polygon);
+            // Cutting preserves traversal direction, but re-fix the resulting parts to be safe
+            if (cut instanceof MultiPolygon && config.isAutoFixPolygonOrientation()) {
+                fixMultiPolygonOrientation((MultiPolygon) cut);
+            }
+            return cut;
         }
 
         return polygon;
+    }
+
+    /**
+     * Processes a MultiPolygon according to RFC 7946 recommendations.
+     * Polygons that cross the antimeridian are cut, so the result may contain
+     * more polygons than the input.
+     *
+     * @param multiPolygon The MultiPolygon to process
+     * @param config       The GeoJSON configuration to use
+     * @return The processed MultiPolygon
+     */
+    public static MultiPolygon processMultiPolygon(MultiPolygon multiPolygon, GeoJsonConfig config) {
+        List<List<List<LngLatAlt>>> processed = new ArrayList<>();
+        for (List<List<LngLatAlt>> rings : multiPolygon.getCoordinates()) {
+            GeoJsonObject result = processPolygon(createPolygonFromRings(rings), config);
+            if (result instanceof MultiPolygon) {
+                processed.addAll(((MultiPolygon) result).getCoordinates());
+            } else {
+                processed.add(((Polygon) result).getCoordinates());
+            }
+        }
+        multiPolygon.setCoordinates(processed);
+        return multiPolygon;
     }
 
     /**
@@ -59,6 +87,35 @@ public class GeoJsonProcessor {
             return AntimeridianUtils.cutLineStringAtAntimeridian(lineString);
         }
         return lineString;
+    }
+
+    /**
+     * Processes a MultiLineString according to RFC 7946 recommendations.
+     * Lines that cross the antimeridian are cut, so the result may contain
+     * more lines than the input.
+     *
+     * @param multiLineString The MultiLineString to process
+     * @param config          The GeoJSON configuration to use
+     * @return The processed MultiLineString
+     */
+    public static MultiLineString processMultiLineString(MultiLineString multiLineString, GeoJsonConfig config) {
+        if (!config.isCutAntimeridian()) {
+            return multiLineString;
+        }
+        List<List<LngLatAlt>> processed = new ArrayList<>();
+        for (List<LngLatAlt> line : multiLineString.getCoordinates()) {
+            processed.addAll(AntimeridianUtils.cutLineAtAntimeridian(line));
+        }
+        multiLineString.setCoordinates(processed);
+        return multiLineString;
+    }
+
+    private static void fixMultiPolygonOrientation(MultiPolygon multiPolygon) {
+        List<List<List<LngLatAlt>>> fixed = new ArrayList<>();
+        for (List<List<LngLatAlt>> rings : multiPolygon.getCoordinates()) {
+            fixed.add(PolygonOrientationUtils.fixPolygonOrientation(rings));
+        }
+        multiPolygon.setCoordinates(fixed);
     }
 
     /**
@@ -119,8 +176,12 @@ public class GeoJsonProcessor {
     public static GeoJsonObject process(GeoJsonObject object, GeoJsonConfig config) {
         if (object instanceof Polygon) {
             return processPolygon((Polygon) object, config);
+        } else if (object instanceof MultiPolygon) {
+            return processMultiPolygon((MultiPolygon) object, config);
         } else if (object instanceof LineString) {
             return processLineString((LineString) object, config);
+        } else if (object instanceof MultiLineString) {
+            return processMultiLineString((MultiLineString) object, config);
         } else if (object instanceof Feature) {
             return processFeature((Feature) object, config);
         } else if (object instanceof FeatureCollection) {
