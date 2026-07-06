@@ -229,8 +229,13 @@ public class AntimeridianUtils {
     /**
      * Cuts a Polygon that crosses the antimeridian into a MultiPolygon.
      * <p>
-     * This implementation properly cuts each ring at the antimeridian and
-     * creates two separate polygons on either side.
+     * Each ring is cut at the antimeridian and the resulting pieces are stitched into
+     * simple rings. A polygon crossing the antimeridian more than twice produces more
+     * than two polygons. Cut and uncut holes are assigned to the exterior piece that
+     * contains them.
+     * <p>
+     * Limitation: rings that cross the antimeridian an odd number of times enclose a pole
+     * and cannot be cut without pole handling; such polygons are returned unchanged.
      *
      * @param polygon The Polygon to cut
      * @return A MultiPolygon if the Polygon crosses the antimeridian, otherwise the original Polygon
@@ -241,149 +246,288 @@ public class AntimeridianUtils {
             return polygon;
         }
 
-        // Check if the polygon crosses the antimeridian
-        if (!polygonCrossesAntimeridian(rings)) {
+        List<List<LngLatAlt>> exteriorPieces = cutRingAtAntimeridian(rings.get(0));
+        if (exteriorPieces.size() == 1) {
+            // The exterior ring wasn't cut, return the original polygon
             return polygon;
         }
 
-        // Create a MultiPolygon to hold the result
-        MultiPolygon multiPolygon = new MultiPolygon();
-
-        // Process the exterior ring first
-        List<LngLatAlt> exteriorRing = rings.get(0);
-        List<List<LngLatAlt>> cutExteriorRings = cutRingAtAntimeridian(exteriorRing);
-
-        if (cutExteriorRings.size() == 1) {
-            // If the exterior ring wasn't cut, just return the original polygon
-            return polygon;
+        List<Polygon> pieces = new ArrayList<>();
+        for (List<LngLatAlt> exteriorPiece : exteriorPieces) {
+            pieces.add(new Polygon(exteriorPiece));
         }
 
-        // We now have two exterior rings, one for each side of the antimeridian
-        List<LngLatAlt> eastExteriorRing = cutExteriorRings.get(0); // East side (positive longitude)
-        List<LngLatAlt> westExteriorRing = cutExteriorRings.get(1); // West side (negative longitude)
-
-        // Process interior rings (holes)
-        List<List<LngLatAlt>> eastInteriorRings = new ArrayList<>();
-        List<List<LngLatAlt>> westInteriorRings = new ArrayList<>();
-
+        // Assign each (possibly cut) interior ring to the exterior piece containing it
         for (int i = 1; i < rings.size(); i++) {
-            List<LngLatAlt> interiorRing = rings.get(i);
-            List<List<LngLatAlt>> cutInteriorRings = cutRingAtAntimeridian(interiorRing);
-
-            if (cutInteriorRings.size() == 1) {
-                // If the interior ring wasn't cut, assign it to the appropriate side
-                List<LngLatAlt> ring = cutInteriorRings.get(0);
-                double avgLon = calculateAverageLongitude(ring);
-
-                if (avgLon > 0) {
-                    eastInteriorRings.add(ring);
-                } else {
-                    westInteriorRings.add(ring);
-                }
-            } else {
-                // The interior ring was cut, add each part to the appropriate side
-                eastInteriorRings.add(cutInteriorRings.get(0)); // East side
-                westInteriorRings.add(cutInteriorRings.get(1)); // West side
+            for (List<LngLatAlt> holePiece : cutRingAtAntimeridian(rings.get(i))) {
+                pieces.get(findContainingPiece(holePiece, exteriorPieces)).addInteriorRing(holePiece);
             }
         }
 
-        // Create the east polygon
-        Polygon eastPolygon = new Polygon();
-        eastPolygon.add(eastExteriorRing);
-        for (List<LngLatAlt> ring : eastInteriorRings) {
-            eastPolygon.addInteriorRing(ring);
+        MultiPolygon multiPolygon = new MultiPolygon();
+        for (Polygon piece : pieces) {
+            multiPolygon.add(piece);
         }
-
-        // Create the west polygon
-        Polygon westPolygon = new Polygon();
-        westPolygon.add(westExteriorRing);
-        for (List<LngLatAlt> ring : westInteriorRings) {
-            westPolygon.addInteriorRing(ring);
-        }
-
-        // Add both polygons to the MultiPolygon
-        multiPolygon.add(eastPolygon);
-        multiPolygon.add(westPolygon);
-
         return multiPolygon;
     }
 
     /**
-     * Cuts a ring at the antimeridian and returns two rings, one for each side.
+     * Cuts a ring at the antimeridian into one or more simple rings.
      * <p>
-     * Note: rings that cross the antimeridian more than twice (multiple lobes on either side)
-     * are merged into a single ring per side, which can produce a self-intersecting ring.
+     * The ring is split into arcs at each antimeridian crossing. Arcs are stitched back
+     * together with segments along the antimeridian, pairing each arc's end with the
+     * correct start based on the ring's orientation, so that a ring crossing the
+     * antimeridian multiple times produces one ring per lobe instead of a
+     * self-intersecting ring. The traversal direction of the input is preserved.
+     * <p>
+     * Limitation: a ring that crosses the antimeridian an odd number of times encloses a
+     * pole and cannot be cut this way; it is returned unchanged.
      *
      * @param ring The ring to cut
-     * @return A list containing either one ring (if no cut was needed) or two rings (east and west sides)
+     * @return A list containing the original ring (if no cut was possible or needed) or the cut rings
      */
     public static List<List<LngLatAlt>> cutRingAtAntimeridian(List<LngLatAlt> ring) {
         List<List<LngLatAlt>> result = new ArrayList<>();
-
-        // Check if the ring crosses the antimeridian
-        boolean crossesAntimeridian = false;
-        for (int i = 0; i < ring.size() - 1; i++) {
-            if (crossesAntimeridian(ring.get(i), ring.get(i + 1))) {
-                crossesAntimeridian = true;
-                break;
-            }
-        }
-
-        if (!crossesAntimeridian) {
-            // If the ring doesn't cross the antimeridian, return it unchanged
+        if (ring == null || ring.size() < 2) {
             result.add(ring);
             return result;
         }
 
-        // Initialize east and west rings
-        List<LngLatAlt> eastRing = new ArrayList<>(); // Positive longitude side
-        List<LngLatAlt> westRing = new ArrayList<>(); // Negative longitude side
+        List<LngLatAlt> closedRing = PolygonOrientationUtils.ensureRingClosed(ring);
+        int uniquePoints = closedRing.size() - 1;
 
-        // Process each segment of the ring
-        for (int i = 0; i < ring.size() - 1; i++) {
-            LngLatAlt p1 = ring.get(i);
-            LngLatAlt p2 = ring.get(i + 1);
-
-            double lon1 = normalizeLongitude(p1.getLongitude());
-            double lon2 = normalizeLongitude(p2.getLongitude());
-
-            // Add the first point to the appropriate ring(s)
-            if (lon1 >= 0) {
-                eastRing.add(new LngLatAlt(lon1, p1.getLatitude(), p1.getAltitude()));
-            } else {
-                westRing.add(new LngLatAlt(lon1, p1.getLatitude(), p1.getAltitude()));
-            }
-
-            // Check if this segment crosses the antimeridian
-            if (crossesAntimeridian(p1, p2)) {
-                // Add intersection points to both rings
-                eastRing.add(intersectionPoint(p1, p2, ANTIMERIDIAN));
-                westRing.add(intersectionPoint(p1, p2, -ANTIMERIDIAN));
+        // Find the segments that cross the antimeridian; segment i runs from vertex i to vertex i + 1
+        List<Integer> crossingSegments = new ArrayList<>();
+        for (int i = 0; i < uniquePoints; i++) {
+            if (crossesAntimeridian(closedRing.get(i), closedRing.get((i + 1) % uniquePoints))) {
+                crossingSegments.add(i);
             }
         }
 
-        // Add the last point to the appropriate ring(s)
-        LngLatAlt lastPoint = ring.get(ring.size() - 1);
-        double lastLon = normalizeLongitude(lastPoint.getLongitude());
-
-        if (lastLon >= 0) {
-            eastRing.add(new LngLatAlt(lastLon, lastPoint.getLatitude(), lastPoint.getAltitude()));
-        } else {
-            westRing.add(new LngLatAlt(lastLon, lastPoint.getLatitude(), lastPoint.getAltitude()));
+        if (crossingSegments.isEmpty() || crossingSegments.size() % 2 != 0) {
+            // No crossings, or an odd number of crossings (ring encloses a pole): return uncut
+            result.add(ring);
+            return result;
         }
 
-        // Close the rings if needed
-        if (!eastRing.isEmpty()) {
-            eastRing = PolygonOrientationUtils.ensureRingClosed(eastRing);
-            result.add(eastRing);
+        boolean ccw = isCounterClockwiseUnwrapped(closedRing);
+        List<Arc> arcs = buildArcs(closedRing, uniquePoints, crossingSegments);
+        return stitchArcs(arcs, ccw);
+    }
+
+    /**
+     * A piece of a ring between two antimeridian crossings. The points start with the
+     * entry intersection on the antimeridian, followed by the original vertices, and end
+     * with the exit intersection on the antimeridian.
+     */
+    private static class Arc {
+
+        final List<LngLatAlt> points = new ArrayList<>();
+        double entryLon;
+        double entryLat;
+        double exitLon;
+        double exitLat;
+    }
+
+    /**
+     * Splits a closed ring into arcs at its antimeridian crossings, walking the ring in
+     * its original direction starting just after the first crossing.
+     */
+    private static List<Arc> buildArcs(List<LngLatAlt> ring, int uniquePoints, List<Integer> crossingSegments) {
+        List<Arc> arcs = new ArrayList<>();
+        int firstCrossing = crossingSegments.get(0);
+        boolean[] crossesAtSegment = new boolean[uniquePoints];
+        for (int segment : crossingSegments) {
+            crossesAtSegment[segment] = true;
         }
 
-        if (!westRing.isEmpty()) {
-            westRing = PolygonOrientationUtils.ensureRingClosed(westRing);
-            result.add(westRing);
+        Arc current = startArc(ring.get(firstCrossing), ring.get((firstCrossing + 1) % uniquePoints));
+        for (int k = 1; k <= uniquePoints; k++) {
+            int index = (firstCrossing + k) % uniquePoints;
+            current.points.add(normalizedPoint(ring.get(index)));
+
+            if (crossesAtSegment[index]) {
+                LngLatAlt p1 = ring.get(index);
+                LngLatAlt p2 = ring.get((index + 1) % uniquePoints);
+                // The exit is on the antimeridian side the segment leaves from
+                double exitLon = normalizeLongitude(p1.getLongitude()) >= 0 ? ANTIMERIDIAN : -ANTIMERIDIAN;
+                LngLatAlt exitPoint = intersectionPoint(p1, p2, exitLon);
+                current.points.add(exitPoint);
+                current.exitLon = exitLon;
+                current.exitLat = exitPoint.getLatitude();
+                arcs.add(current);
+
+                if (k < uniquePoints) {
+                    current = startArc(p1, p2);
+                }
+            }
+        }
+        return arcs;
+    }
+
+    /**
+     * Starts a new arc at the entry intersection of the given crossing segment.
+     */
+    private static Arc startArc(LngLatAlt p1, LngLatAlt p2) {
+        // The entry is on the opposite antimeridian side from the one the segment leaves
+        double entryLon = normalizeLongitude(p1.getLongitude()) >= 0 ? -ANTIMERIDIAN : ANTIMERIDIAN;
+        Arc arc = new Arc();
+        LngLatAlt entryPoint = intersectionPoint(p1, p2, entryLon);
+        arc.points.add(entryPoint);
+        arc.entryLon = entryLon;
+        arc.entryLat = entryPoint.getLatitude();
+        return arc;
+    }
+
+    /**
+     * Stitches arcs into closed rings. Each arc's exit connects along the antimeridian to
+     * the nearest arc entry on the same side, searching north or south depending on the
+     * ring orientation, so that connecting segments bound the polygon interior.
+     */
+    private static List<List<LngLatAlt>> stitchArcs(List<Arc> arcs, boolean ccw) {
+        List<List<LngLatAlt>> rings = new ArrayList<>();
+        boolean[] visited = new boolean[arcs.size()];
+
+        for (int start = 0; start < arcs.size(); start++) {
+            if (visited[start]) {
+                continue;
+            }
+            visited[start] = true;
+
+            List<LngLatAlt> ring = new ArrayList<>();
+            int current = start;
+            while (true) {
+                ring.addAll(arcs.get(current).points);
+                int next = findConnectedArc(arcs, visited, start, arcs.get(current), ccw);
+                if (next == -1 || next == start) {
+                    break;
+                }
+                visited[next] = true;
+                current = next;
+            }
+
+            // Close the ring back to the entry point of the first arc
+            LngLatAlt first = ring.get(0);
+            ring.add(new LngLatAlt(first.getLongitude(), first.getLatitude()));
+            rings.add(ring);
+        }
+        return rings;
+    }
+
+    /**
+     * Finds the arc whose entry point connects to the given arc's exit point along the
+     * antimeridian. For a counterclockwise ring, exits on the east side (180) connect
+     * northward and exits on the west side (-180) connect southward; for a clockwise
+     * ring the directions are mirrored.
+     */
+    private static int findConnectedArc(List<Arc> arcs, boolean[] visited, int start, Arc from, boolean ccw) {
+        boolean searchNorth = (from.exitLon > 0) == ccw;
+        int best = -1;
+        double bestDelta = Double.MAX_VALUE;
+        for (int i = 0; i < arcs.size(); i++) {
+            if (visited[i] && i != start) {
+                continue;
+            }
+            Arc candidate = arcs.get(i);
+            if (candidate.entryLon != from.exitLon) {
+                continue;
+            }
+            double delta = searchNorth ? candidate.entryLat - from.exitLat : from.exitLat - candidate.entryLat;
+            if (delta >= 0 && delta < bestDelta) {
+                bestDelta = delta;
+                best = i;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Determines ring orientation using the shoelace formula on unwrapped longitudes, so
+     * that rings crossing the antimeridian are measured as the continuous shape they
+     * describe rather than as a shape spanning the world the other way around.
+     */
+    private static boolean isCounterClockwiseUnwrapped(List<LngLatAlt> ring) {
+        double sum = 0;
+        double previousLon = normalizeLongitude(ring.get(0).getLongitude());
+        double previousUnwrapped = previousLon;
+        for (int i = 1; i < ring.size(); i++) {
+            double lon = normalizeLongitude(ring.get(i).getLongitude());
+            double unwrapped = previousUnwrapped + normalizeLongitude(lon - previousLon);
+            sum += (unwrapped - previousUnwrapped) * (ring.get(i).getLatitude() + ring.get(i - 1).getLatitude());
+            previousLon = lon;
+            previousUnwrapped = unwrapped;
+        }
+        return sum < 0;
+    }
+
+    /**
+     * Returns the point with its longitude normalized to [-180, 180], reusing the
+     * original point when it is already normalized.
+     */
+    private static LngLatAlt normalizedPoint(LngLatAlt point) {
+        double lon = normalizeLongitude(point.getLongitude());
+        if (lon == point.getLongitude()) {
+            return point;
+        }
+        if (point.hasAltitude()) {
+            return new LngLatAlt(lon, point.getLatitude(), point.getAltitude());
+        }
+        return new LngLatAlt(lon, point.getLatitude());
+    }
+
+    /**
+     * Finds the index of the exterior piece containing the given hole piece, preferring a
+     * point-in-ring test on a representative point and falling back to the closest
+     * average longitude.
+     */
+    private static int findContainingPiece(List<LngLatAlt> holePiece, List<List<LngLatAlt>> exteriorPieces) {
+        // Prefer a representative point that is not on the antimeridian itself
+        LngLatAlt representative = holePiece.get(0);
+        for (LngLatAlt point : holePiece) {
+            if (Math.abs(normalizeLongitude(point.getLongitude())) != ANTIMERIDIAN) {
+                representative = point;
+                break;
+            }
         }
 
-        return result;
+        for (int i = 0; i < exteriorPieces.size(); i++) {
+            if (isPointInRing(representative, exteriorPieces.get(i))) {
+                return i;
+            }
+        }
+
+        // Fallback for degenerate cases: the piece with the closest average longitude
+        double holeLon = calculateAverageLongitude(holePiece);
+        int best = 0;
+        double bestDistance = Double.MAX_VALUE;
+        for (int i = 0; i < exteriorPieces.size(); i++) {
+            double distance = Math.abs(normalizeLongitude(calculateAverageLongitude(exteriorPieces.get(i)) - holeLon));
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = i;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Tests whether a point lies inside a ring using even-odd ray casting on normalized
+     * longitudes. The ring must not cross the antimeridian.
+     */
+    private static boolean isPointInRing(LngLatAlt point, List<LngLatAlt> ring) {
+        double lon = normalizeLongitude(point.getLongitude());
+        double lat = point.getLatitude();
+        boolean inside = false;
+        for (int i = 0, j = ring.size() - 1; i < ring.size(); j = i++) {
+            double loni = normalizeLongitude(ring.get(i).getLongitude());
+            double lati = ring.get(i).getLatitude();
+            double lonj = normalizeLongitude(ring.get(j).getLongitude());
+            double latj = ring.get(j).getLatitude();
+            if ((lati > lat) != (latj > lat) && lon < (lonj - loni) * (lat - lati) / (latj - lati) + loni) {
+                inside = !inside;
+            }
+        }
+        return inside;
     }
 
     /**

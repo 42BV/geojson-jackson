@@ -157,7 +157,11 @@ anotherPolygon.setConfig(autoFixConfig);
 
 ### Antimeridian Cutting
 
-RFC 7946 recommends cutting geometries that cross the antimeridian. You can enable this feature:
+RFC 7946 recommends cutting geometries that cross the antimeridian. Geometries crossing the antimeridian multiple times are cut into multiple parts (one polygon
+per lobe), and holes are assigned to the polygon that contains them. Polygons that enclose a pole (crossing the antimeridian an odd number of times) cannot be
+cut this way and are left unchanged.
+
+You can enable this feature:
 
 ```java
 // Create a configuration with antimeridian cutting enabled

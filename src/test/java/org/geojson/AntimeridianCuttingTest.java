@@ -279,6 +279,181 @@ public class AntimeridianCuttingTest {
     }
 
     @Test
+    public void testMultiLobePolygonCutting() {
+        // A C-shaped polygon: a body on the west side of the antimeridian with two prongs
+        // reaching across it (crossing the antimeridian four times). Cutting should produce
+        // three polygons: the body and the two prong tips, not merged self-intersecting rings.
+        Polygon polygon = new Polygon(Arrays.asList(
+                new LngLatAlt(-175, -5),
+                new LngLatAlt(-165, -5),
+                new LngLatAlt(-165, 35),
+                new LngLatAlt(-175, 35),
+                new LngLatAlt(-175, 30),
+                new LngLatAlt(175, 30),
+                new LngLatAlt(175, 20),
+                new LngLatAlt(-175, 20),
+                new LngLatAlt(-175, 10),
+                new LngLatAlt(175, 10),
+                new LngLatAlt(175, 0),
+                new LngLatAlt(-175, 0),
+                new LngLatAlt(-175, -5)
+        ));
+
+        GeoJsonObject result = AntimeridianUtils.cutPolygonAtAntimeridian(polygon);
+
+        assertTrue("Result should be a MultiPolygon", result instanceof MultiPolygon);
+        MultiPolygon multiPolygon = (MultiPolygon) result;
+        assertEquals("Should have 3 polygons: the body and two prong tips", 3, multiPolygon.getCoordinates().size());
+        assertRingsAreSimpleAndClosed(multiPolygon);
+
+        // Two pieces are the prong tips on the east side, one is the body on the west side
+        int eastPieces = 0;
+        int westPieces = 0;
+        for (List<List<LngLatAlt>> polygonRings : multiPolygon.getCoordinates()) {
+            if (polygonRings.get(0).get(1).getLongitude() > 0) {
+                eastPieces++;
+            } else {
+                westPieces++;
+            }
+        }
+        assertEquals("Should have 2 pieces on the east side", 2, eastPieces);
+        assertEquals("Should have 1 piece on the west side", 1, westPieces);
+    }
+
+    @Test
+    public void testWidePolygonSpanningPrimeMeridian() {
+        // A polygon wider than a hemisphere: it crosses the antimeridian but also spans the
+        // prime meridian, so one arc contains both positive and negative longitudes. The cut
+        // must keep such arcs intact instead of assigning points to sides individually.
+        Polygon polygon = new Polygon(Arrays.asList(
+                new LngLatAlt(10, 10),
+                new LngLatAlt(-10, 10),
+                new LngLatAlt(-120, 10),
+                new LngLatAlt(160, 10),
+                new LngLatAlt(160, 20),
+                new LngLatAlt(-120, 20),
+                new LngLatAlt(-10, 20),
+                new LngLatAlt(10, 20),
+                new LngLatAlt(10, 10)
+        ));
+
+        GeoJsonObject result = AntimeridianUtils.cutPolygonAtAntimeridian(polygon);
+
+        assertTrue("Result should be a MultiPolygon", result instanceof MultiPolygon);
+        MultiPolygon multiPolygon = (MultiPolygon) result;
+        assertEquals("Should have 2 polygons", 2, multiPolygon.getCoordinates().size());
+        assertRingsAreSimpleAndClosed(multiPolygon);
+
+        // The piece containing longitude 10 must also contain longitude -120: they belong to
+        // the same arc, on the same side of the antimeridian
+        for (List<List<LngLatAlt>> polygonRings : multiPolygon.getCoordinates()) {
+            boolean hasLon10 = false;
+            boolean hasLonMinus120 = false;
+            for (LngLatAlt point : polygonRings.get(0)) {
+                if (point.getLongitude() == 10) {
+                    hasLon10 = true;
+                }
+                if (point.getLongitude() == -120) {
+                    hasLonMinus120 = true;
+                }
+            }
+            assertEquals("Longitudes 10 and -120 must stay in the same ring", hasLon10, hasLonMinus120);
+        }
+    }
+
+    @Test
+    public void testHoleAssignedToCorrectLobe() {
+        // The multi-lobe polygon from above, with a hole inside the upper east prong tip.
+        // The hole must be assigned to that specific piece, not just to "the east side".
+        Polygon polygon = new Polygon(Arrays.asList(
+                new LngLatAlt(-175, -5),
+                new LngLatAlt(-165, -5),
+                new LngLatAlt(-165, 35),
+                new LngLatAlt(-175, 35),
+                new LngLatAlt(-175, 30),
+                new LngLatAlt(175, 30),
+                new LngLatAlt(175, 20),
+                new LngLatAlt(-175, 20),
+                new LngLatAlt(-175, 10),
+                new LngLatAlt(175, 10),
+                new LngLatAlt(175, 0),
+                new LngLatAlt(-175, 0),
+                new LngLatAlt(-175, -5)
+        ));
+        polygon.addInteriorRing(
+                new LngLatAlt(176, 24),
+                new LngLatAlt(178, 24),
+                new LngLatAlt(178, 26),
+                new LngLatAlt(176, 26),
+                new LngLatAlt(176, 24)
+        );
+
+        GeoJsonObject result = AntimeridianUtils.cutPolygonAtAntimeridian(polygon);
+
+        assertTrue("Result should be a MultiPolygon", result instanceof MultiPolygon);
+        MultiPolygon multiPolygon = (MultiPolygon) result;
+        assertEquals("Should have 3 polygons", 3, multiPolygon.getCoordinates().size());
+
+        List<List<LngLatAlt>> polygonWithHole = null;
+        for (List<List<LngLatAlt>> polygonRings : multiPolygon.getCoordinates()) {
+            if (polygonRings.size() > 1) {
+                assertEquals("Only one piece should have a hole", null, polygonWithHole);
+                polygonWithHole = polygonRings;
+            }
+        }
+        assertTrue("One piece should have the hole", polygonWithHole != null);
+
+        // The piece with the hole must be the upper east prong tip (latitudes 20 to 30)
+        for (LngLatAlt point : polygonWithHole.get(0)) {
+            assertTrue("Hole should be in the upper east prong tip",
+                    point.getLongitude() >= 175 && point.getLatitude() >= 20 && point.getLatitude() <= 30);
+        }
+    }
+
+    @Test
+    public void testCircumnavigatingRingReturnedUncut() {
+        // A ring crossing the antimeridian an odd number of times encloses a pole and
+        // cannot be cut without pole handling; it should be returned unchanged
+        List<LngLatAlt> ring = Arrays.asList(
+                new LngLatAlt(0, 60),
+                new LngLatAlt(120, 60),
+                new LngLatAlt(-120, 60),
+                new LngLatAlt(0, 60)
+        );
+
+        List<List<LngLatAlt>> result = AntimeridianUtils.cutRingAtAntimeridian(ring);
+
+        assertEquals("Ring enclosing a pole should be returned uncut", 1, result.size());
+        assertEquals(ring, result.get(0));
+    }
+
+    /**
+     * Asserts every ring is closed, has normalized longitudes, and contains no segment
+     * jumping more than 180 degrees (which would indicate a garbled or merged ring).
+     */
+    private static void assertRingsAreSimpleAndClosed(MultiPolygon multiPolygon) {
+        for (List<List<LngLatAlt>> polygonRings : multiPolygon.getCoordinates()) {
+            for (List<LngLatAlt> ring : polygonRings) {
+                assertTrue("Ring should have at least 4 points", ring.size() >= 4);
+
+                LngLatAlt first = ring.get(0);
+                LngLatAlt last = ring.get(ring.size() - 1);
+                assertEquals("Ring should be closed", first.getLongitude(), last.getLongitude(), 0.0001);
+                assertEquals("Ring should be closed", first.getLatitude(), last.getLatitude(), 0.0001);
+
+                for (int i = 0; i < ring.size(); i++) {
+                    double lon = ring.get(i).getLongitude();
+                    assertTrue("Longitude should be normalized", lon >= -180 && lon <= 180);
+                    if (i > 0) {
+                        double jump = Math.abs(lon - ring.get(i - 1).getLongitude());
+                        assertTrue("No segment should jump more than 180 degrees, found " + jump, jump <= 180);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     public void testGeometryCollectionCutting() {
         LineString lineString = new LineString(
                 new LngLatAlt(170, 45),
