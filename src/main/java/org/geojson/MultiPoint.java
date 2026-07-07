@@ -16,6 +16,6 @@ public class MultiPoint extends Geometry<LngLatAlt> {
 
 	@Override
 	public String toString() {
-		return "MultiPoint{} " + super.toString();
+		return buildToString("MultiPoint");
 	}
 }
