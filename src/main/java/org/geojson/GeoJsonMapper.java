@@ -1,6 +1,6 @@
 package org.geojson;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * A custom ObjectMapper for GeoJSON processing.

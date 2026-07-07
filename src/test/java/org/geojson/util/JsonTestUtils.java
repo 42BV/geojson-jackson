@@ -8,8 +8,8 @@ import java.io.IOException;
 
 import org.geojson.LngLatAlt;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Utility class for JSON comparison in tests.

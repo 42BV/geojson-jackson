@@ -11,7 +11,7 @@ import org.geojson.util.AntimeridianUtils;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 
 public class AntimeridianCuttingTest {
 
@@ -64,7 +64,7 @@ public class AntimeridianCuttingTest {
     }
 
     @Test
-    public void testPolygonCutting() throws JsonProcessingException {
+    public void testPolygonCutting() throws JacksonException {
         List<LngLatAlt> ring = Arrays.asList(
                 new LngLatAlt(170, 40),
                 new LngLatAlt(170, 50),
@@ -86,7 +86,7 @@ public class AntimeridianCuttingTest {
     }
 
     @Test
-    public void testPolygonCuttingImproved() throws JsonProcessingException {
+    public void testPolygonCuttingImproved() throws JacksonException {
         // Create a polygon that crosses the antimeridian
         Polygon polygon = new Polygon();
         polygon.setConfig(config);

@@ -11,6 +11,8 @@ import java.util.Arrays;
 import org.junit.Before;
 import org.junit.Test;
 
+import tools.jackson.core.JacksonException;
+
 public class EdgeCasesTest {
 
     private GeoJsonMapper mapper;
@@ -117,14 +119,14 @@ public class EdgeCasesTest {
         try {
             mapper.readValue("{\"type\":\"Point\",\"coordinates\":[10,}", Point.class);
             fail("Should have thrown an exception for invalid JSON");
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             // Expected exception
         }
 
         try {
             mapper.readValue("{\"type\":\"InvalidType\",\"coordinates\":[10,20]}", GeoJsonObject.class);
             fail("Should have thrown an exception for invalid GeoJSON type");
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             // Expected exception
         }
     }
